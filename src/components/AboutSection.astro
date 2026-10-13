@@ -1,0 +1,80 @@
+---
+/* "Sobre nosotros" con placeholder de video.
+   Para activar el video, pasar `videoEmbedUrl` con la URL de incrustación
+   (ej. "https://www.youtube.com/embed/XXXXXXXXXXX"): al hacer clic en play se
+   reemplaza el placeholder por el iframe. */
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  text?: string;
+  points?: string[];
+  videoEmbedUrl?: string;
+  videoCaption?: string;
+}
+
+const {
+  eyebrow = "Sobre nosotros",
+  title = "Una mutual cerca de tu hogar",
+  text = "Conocé quiénes somos y cómo te acompañamos en cada compra. Texto institucional de ejemplo: reemplazar por la presentación real de la mutual.",
+  points = [
+    "Respaldo y cercanía de la mutual",
+    "Financiación pensada para socios",
+    "Atención personalizada antes y después de comprar",
+  ],
+  videoEmbedUrl,
+  videoCaption = "Video institucional — Mutual Coyspu Hogar",
+} = Astro.props;
+---
+
+<section class="section section--sand" id="nosotros" aria-labelledby="nosotros-title">
+  <div class="container about">
+    <div>
+      <span class="eyebrow eyebrow--dark">{eyebrow}</span>
+      <h2 id="nosotros-title">{title}</h2>
+      <p>{text}</p>
+      <ul class="about__points">
+        {points.map((p) => (
+          <li>
+            <span class="tick">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+            </span>
+            {p}
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <figure class="video-ph" data-embed={videoEmbedUrl}>
+      <button type="button" class="video-ph__play" aria-label="Reproducir video institucional">
+        <svg class="icon" aria-hidden="true"><use href="#i-play" /></svg>
+      </button>
+      <figcaption>{videoCaption}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<script>
+  const figure = document.querySelector<HTMLElement>(".video-ph");
+  const play = figure?.querySelector<HTMLButtonElement>(".video-ph__play");
+
+  play?.addEventListener("click", () => {
+    if (!figure) return;
+    const embed = figure.dataset.embed;
+
+    if (embed && embed.startsWith("https://")) {
+      const url = new URL(embed);
+      url.searchParams.set("autoplay", "1");
+
+      const iframe = document.createElement("iframe");
+      iframe.src = url.toString();
+      iframe.title = "Video institucional";
+      iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+      iframe.allowFullscreen = true;
+      iframe.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0";
+      figure.replaceChildren(iframe);
+    } else {
+      const cap = figure.querySelector("figcaption");
+      if (cap) cap.textContent = "El video institucional estará disponible próximamente.";
+    }
+  });
+</script>

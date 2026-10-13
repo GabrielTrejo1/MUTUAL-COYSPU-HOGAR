@@ -1,0 +1,263 @@
+---
+/* Modal de producto (oculto por defecto). Se rellena con los datos del botón
+   [data-product] de ProductCard. Variables de entorno opcionales:
+     PUBLIC_WHATSAPP_NUMBER=5493472123456   (solo dígitos, con código de país)
+     PUBLIC_STORE_NAME="Mutual Coyspu Hogar" */
+const whatsapp = (import.meta.env.PUBLIC_WHATSAPP_NUMBER as string | undefined) ?? "";
+const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutual Coyspu Hogar";
+---
+
+<div
+  class="modal"
+  id="product-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  aria-hidden="true"
+  data-wa={whatsapp}
+  data-store={store}
+>
+  <div class="modal__backdrop" data-close></div>
+
+  <div class="modal__panel" tabindex="-1">
+    <button type="button" class="modal__close" data-close aria-label="Cerrar">
+      <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
+    </button>
+
+    <div class="modal__media" id="modal-media"></div>
+
+    <div class="modal__info">
+      <span class="modal__code" id="modal-code"></span>
+      <h2 id="modal-title"></h2>
+
+      <div class="price">
+        <span class="price__old" id="modal-old"></span>
+        <span class="price__now" id="modal-price"></span>
+        <p class="installments" id="modal-installments"></p>
+      </div>
+
+      <fieldset class="modal__colors" id="modal-colors">
+        <legend>Color: <span id="modal-color-name"></span></legend>
+        <div class="swatch-picker" id="modal-swatches"></div>
+      </fieldset>
+
+      <p class="modal__desc" id="modal-desc"></p>
+      <ul class="modal__specs" id="modal-specs"></ul>
+
+      <a class="btn btn--whatsapp" id="modal-wa" href="#" target="_blank" rel="noopener">
+        <svg class="icon" aria-hidden="true"><use href="#i-whatsapp" /></svg>
+        Consultar por WhatsApp
+      </a>
+      <p class="modal__note">Precios y stock sujetos a confirmación.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  interface Payload {
+    name: string;
+    code: string;
+    brand: string;
+    category: string;
+    tone: string;
+    icon: string;
+    image: string;
+    badges: { label: string; off?: boolean }[];
+    oldPrice: string;
+    price: string;
+    installments: number;
+    perInstallment: string;
+    colors: { name: string; hex: string }[];
+    description: string;
+    specs: string[];
+  }
+
+  const modal = document.getElementById("product-modal");
+
+  if (modal) {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const $ = <T extends HTMLElement = HTMLElement>(sel: string) => modal.querySelector(sel) as T;
+
+    const panel = $(".modal__panel");
+    const info = $(".modal__info");
+    const media = $("#modal-media");
+    const waLink = $<HTMLAnchorElement>("#modal-wa");
+    const waNumber = modal.dataset.wa ?? "";
+    const store = modal.dataset.store ?? "";
+
+    let current: Payload | null = null;
+    let lastFocus: HTMLElement | null = null;
+
+    /* ----- helpers ----- */
+    function iconEl(id: string) {
+      const svg = document.createElementNS(SVG_NS, "svg");
+      svg.setAttribute("class", "icon");
+      svg.setAttribute("aria-hidden", "true");
+      const use = document.createElementNS(SVG_NS, "use");
+      use.setAttribute("href", `#${id}`);
+      svg.appendChild(use);
+      return svg;
+    }
+
+    function whatsappUrl(p: Payload, color: string) {
+      const msg =
+        `Hola! Me interesa «${p.name}»` +
+        (color ? ` en color ${color}` : "") +
+        ` que vi en el catálogo de ${store}. ¿Me pasan más información?`;
+      return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+    }
+
+    function setColor(i: number) {
+      if (!current) return;
+      const color = current.colors[i]?.name ?? "";
+      $("#modal-color-name").textContent = color;
+      modal!.querySelectorAll<HTMLButtonElement>(".swatch-picker button").forEach((b, idx) => {
+        b.setAttribute("aria-pressed", String(idx === i));
+      });
+      waLink.href = whatsappUrl(current, color);
+    }
+
+    /* ----- rellenar ----- */
+    function fill(p: Payload) {
+      current = p;
+
+      // Imagen / placeholder + badges
+      media.className = `modal__media ${p.tone}`;
+      media.replaceChildren();
+      if (p.badges.length) {
+        const wrap = document.createElement("div");
+        wrap.className = "badges";
+        p.badges.forEach((b) => {
+          const s = document.createElement("span");
+          s.className = b.off ? "badge badge--off" : "badge";
+          s.textContent = b.label;
+          wrap.appendChild(s);
+        });
+        media.appendChild(wrap);
+      }
+      if (p.image) {
+        const img = document.createElement("img");
+        img.src = p.image;
+        img.alt = p.name;
+        media.appendChild(img);
+      } else {
+        media.appendChild(iconEl(p.icon));
+      }
+
+      // Textos
+      $("#modal-code").textContent = [p.category, p.brand, p.code && `Cód. ${p.code}`].filter(Boolean).join(" · ");
+      $("#modal-title").textContent = p.name;
+
+      const old = $("#modal-old");
+      old.textContent = p.oldPrice;
+      old.style.display = p.oldPrice ? "" : "none";
+      $("#modal-price").textContent = p.price;
+
+      const inst = $("#modal-installments");
+      const strong = document.createElement("strong");
+      strong.textContent = p.perInstallment;
+      inst.replaceChildren(`${p.installments} cuotas sin interés de `, strong);
+      inst.style.display = p.installments > 1 ? "" : "none";
+
+      $("#modal-desc").textContent = p.description;
+      $("#modal-desc").style.display = p.description ? "" : "none";
+
+      const specs = $("#modal-specs");
+      specs.replaceChildren(
+        ...p.specs.map((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          return li;
+        })
+      );
+      specs.style.display = p.specs.length ? "" : "none";
+
+      // Colores
+      const colorsBox = $("#modal-colors");
+      const picker = $("#modal-swatches");
+      picker.replaceChildren();
+      if (p.colors.length) {
+        colorsBox.hidden = false;
+        p.colors.forEach((c, i) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.style.setProperty("--sw", c.hex);
+          b.dataset.color = String(i);
+          b.title = c.name;
+          b.setAttribute("aria-label", c.name);
+          b.setAttribute("aria-pressed", "false");
+          picker.appendChild(b);
+        });
+        setColor(0);
+      } else {
+        colorsBox.hidden = true;
+        waLink.href = whatsappUrl(p, "");
+      }
+
+      panel.scrollTop = 0;
+      info.scrollTop = 0;
+    }
+
+    /* ----- abrir / cerrar ----- */
+    function open(p: Payload, trigger: HTMLElement) {
+      lastFocus = trigger;
+      fill(p);
+      modal!.classList.add("is-open");
+      modal!.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+      $<HTMLButtonElement>(".modal__close").focus();
+    }
+
+    function close() {
+      if (!modal!.classList.contains("is-open")) return;
+      modal!.classList.remove("is-open");
+      modal!.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+      lastFocus?.focus();
+    }
+
+    function trapFocus(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const items = Array.from(
+        panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter((el) => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    /* ----- eventos (delegados: sirven para todas las tarjetas) ----- */
+    document.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+
+      const trigger = target.closest<HTMLElement>("[data-product]");
+      if (trigger) {
+        try {
+          open(JSON.parse(trigger.dataset.product ?? "{}") as Payload, trigger);
+        } catch {
+          /* datos inválidos: no abrir */
+        }
+        return;
+      }
+      if (target.closest("[data-close]")) {
+        close();
+        return;
+      }
+      const sw = target.closest<HTMLButtonElement>(".swatch-picker button");
+      if (sw) setColor(Number(sw.dataset.color));
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!modal.classList.contains("is-open")) return;
+      if (e.key === "Escape") close();
+      else trapFocus(e);
+    });
+  }
+</script>

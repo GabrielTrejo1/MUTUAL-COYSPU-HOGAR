@@ -1,0 +1,76 @@
+---
+/* Hero + tira de beneficios ("logos informativos") que se solapa con su borde inferior. */
+interface Props {
+  /** URL de la imagen de fondo (ej. importada desde src/assets o /public) */
+  image?: string;
+}
+const { image } = Astro.props;
+
+const perks = [
+  {
+    title: "Envíos gratis",
+    text: "A toda la zona de cobertura",
+    svg: '<path d="M2 6.5h11V17H2z"/><path d="M13 10h4.5l3.5 3.5V17H13"/><circle cx="6.5" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
+  },
+  {
+    title: "Hasta 10 cuotas",
+    text: "Sin interés con Tarjeta Mutual Coyspu",
+    svg: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
+  },
+  {
+    title: "Compra segura",
+    text: "Garantía en cada producto",
+    svg: '<path d="M12 3 4.5 6v5.5c0 4.4 3.1 7.9 7.5 9.5 4.4-1.6 7.5-5.1 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
+  },
+  {
+    title: "Atención personalizada",
+    text: "Te acompañamos en tu compra",
+    svg: '<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2-4 2"/>',
+  },
+];
+---
+
+<section
+  class="hero"
+  aria-labelledby="hero-title"
+  style={image ? `--hero-image: url('${image}')` : undefined}
+>
+  <span class="hero__blob hero__blob--a" aria-hidden="true"></span>
+  <span class="hero__blob hero__blob--b" aria-hidden="true"></span>
+
+  <div class="container">
+    <div class="hero__content">
+      <span class="eyebrow">Mutual Coyspu Hogar</span>
+      <h1 id="hero-title">Todo lo que tu hogar <em>necesita</em>, en un solo lugar.</h1>
+      <p>
+        Electrodomésticos, muebles y artículos para cada ambiente, con financiación pensada para los
+        socios y la comunidad.
+      </p>
+      <div class="hero__actions">
+        <a href="#catalogo" class="btn btn--leaf">
+          Ver catálogo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#ofertas" class="btn btn--ghost">Ofertas del mes</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="perks" aria-label="Beneficios de compra">
+  <div class="container">
+    <ul class="perks__list">
+      {perks.map((p) => (
+        <li class="perk">
+          <span class="perk__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" set:html={p.svg} />
+          </span>
+          <div>
+            <h3>{p.title}</h3>
+            <p>{p.text}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

@@ -1,0 +1,64 @@
+---
+/* Barra de navegación responsive. Los enlaces usan rutas absolutas ("/#…")
+   para funcionar también desde las páginas de categoría. */
+const { pathname } = Astro.url;
+
+const links = [
+  { href: "/", label: "Inicio" },
+  { href: "/#catalogo", label: "Catálogo" },
+  { href: "/#ofertas", label: "Ofertas" },
+  { href: "/#nosotros", label: "Nosotros" },
+  { href: "/#contacto", label: "Contacto" },
+];
+---
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="/" class="brand" aria-label="Mutual Coyspu Hogar — Inicio">
+      <img src="/img/Logo-Hogar.png" alt="Logo Mutual Coyspu Hogar" class="brand__logo" width="120" height="auto" />
+    </a>
+
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Abrir menú">
+      <span></span>
+    </button>
+
+    <div class="nav__menu" id="menu">
+      <nav aria-label="Principal">
+        <ul class="nav__links">
+          {links.map((l) => (
+            <li>
+              <a href={l.href} aria-current={l.href === "/" && pathname === "/" ? "page" : undefined}>
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <a href="/#contacto" class="btn nav__cta">Consultar</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Menú móvil: abrir/cerrar
+  const toggle = document.querySelector<HTMLButtonElement>(".nav__toggle");
+  const menu = document.getElementById("menu");
+
+  if (toggle && menu) {
+    const setOpen = (open: boolean) => {
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+      menu.classList.toggle("is-open", open);
+    };
+
+    toggle.addEventListener("click", () => {
+      setOpen(toggle.getAttribute("aria-expanded") !== "true");
+    });
+    menu.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("a")) setOpen(false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setOpen(false);
+    });
+  }
+</script>

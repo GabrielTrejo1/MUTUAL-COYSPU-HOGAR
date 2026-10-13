@@ -1,0 +1,48 @@
+---
+/* Página de categoría (departamento o subcategoría). Con salida estática (por
+   defecto en Astro) se genera una página por categoría de Sanity en el build;
+   para ver cambios del CMS hay que volver a compilar (ej. con un webhook). */
+import Layout from "../../layouts/Layout.astro";
+import ProductSection from "../../components/ProductSection.astro";
+import CategoryGrid from "../../components/CategoryGrid.astro";
+import { getAllCategories, getProductsByCategory, getSubcategories } from "../../lib/sanity";
+
+export async function getStaticPaths() {
+  const categories = await getAllCategories();
+  return categories.map((category) => ({
+    params: { slug: category.slug },
+    props: { category },
+  }));
+}
+
+const { category } = Astro.props;
+
+// En un departamento se incluyen también los productos de sus subcategorías
+const [products, subcategories] = await Promise.all([
+  getProductsByCategory(category.slug),
+  getSubcategories(category.slug),
+]);
+
+const hasChildren = subcategories.length > 0;
+const back = category.parent
+  ? { href: `/categorias/${category.parent.slug}`, label: `Volver a ${category.parent.title}` }
+  : { href: "/", label: "Volver al inicio" };
+---
+
+<Layout
+  title={`${category.title} — Mutual Coyspu Hogar`}
+  description={`Catálogo de ${category.title.toLowerCase()} de Mutual Coyspu Hogar.`}
+>
+  {hasChildren && (
+    <CategoryGrid categories={subcategories} eyebrow="Subcategorías" title={category.title} />
+  )}
+
+  <ProductSection
+    eyebrow={hasChildren ? "Todos los productos" : "Categoría"}
+    title={hasChildren ? `Todo en ${category.title}` : category.title}
+    products={products}
+    emptyMessage="Todavía no hay productos en esta categoría."
+    href={back.href}
+    hrefLabel={back.label}
+  />
+</Layout>

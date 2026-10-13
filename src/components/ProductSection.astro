@@ -1,0 +1,103 @@
+---
+/* Sección de productos. Tiene dos modos:
+   - Normal: encabezado (eyebrow + título + enlace opcional) y grilla.
+   - Destacados: si se pasa `banner`, se muestra el banner arriba de la grilla.
+   Si no hay productos (y no se pasó `emptyMessage`) la sección no se dibuja. */
+import ProductCard from "./ProductCard.astro";
+
+export interface Banner {
+  title: string;
+  text: string;
+  theme: "leaf" | "brown" | "sand" | "teal";
+  /** id del sprite de íconos, ej. "i-bike" */
+  icon: string;
+  /** invierte el lado del arte decorativo */
+  flip?: boolean;
+  ctaLabel: string;
+  ctaHref: string;
+  /** imagen de fondo opcional */
+  image?: string;
+}
+
+interface Props {
+  /** Productos tal como los devuelve PRODUCT_FIELDS en lib/sanity.js */
+  products: any[];
+  title?: string;
+  eyebrow?: string;
+  id?: string;
+  variant?: "default" | "sand";
+  href?: string;
+  hrefLabel?: string;
+  banner?: Banner;
+  emptyMessage?: string;
+}
+
+const {
+  products,
+  title = "",
+  eyebrow,
+  id,
+  variant = "default",
+  href,
+  hrefLabel = "Ver todo",
+  banner,
+  emptyMessage,
+} = Astro.props;
+
+const slugify = (s: string) =>
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const headingId = `${id ?? slugify(banner?.title ?? title) ?? "seccion"}-title`;
+const visible = products.length > 0 || Boolean(emptyMessage);
+const ctaClass = banner?.theme === "brown" ? "btn btn--leaf" : "btn btn--dark";
+---
+
+{visible && (
+  <section
+    class:list={["section", banner && "section--tight featured", !banner && variant === "sand" && "section--sand"]}
+    id={id}
+    aria-labelledby={headingId}
+  >
+    <div class="container">
+      {banner ? (
+        <div
+          class:list={["banner", `banner--${banner.theme}`, banner.flip && "banner--flip"]}
+          style={banner.image ? `--banner-image: url('${banner.image}')` : undefined}
+        >
+          <div>
+            <span class="banner__kicker">Destacados</span>
+            <h2 id={headingId}>{banner.title}</h2>
+            <p>{banner.text}</p>
+            <a href={banner.ctaHref} class={ctaClass}>
+              {banner.ctaLabel}
+              <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+            </a>
+          </div>
+          <div class="banner__art" aria-hidden="true">
+            <svg class="icon"><use href={`#${banner.icon}`} /></svg>
+          </div>
+        </div>
+      ) : (
+        <div class="section-head">
+          <div>
+            {eyebrow && <span class="eyebrow eyebrow--dark">{eyebrow}</span>}
+            <h2 id={headingId}>{title}</h2>
+          </div>
+          {href && (
+            <a href={href} class="link-more">
+              {hrefLabel} <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg>
+            </a>
+          )}
+        </div>
+      )}
+
+      {products.length > 0 ? (
+        <div class="product-grid">
+          {products.map((p) => <ProductCard product={p} />)}
+        </div>
+      ) : (
+        <p>{emptyMessage}</p>
+      )}
+    </div>
+  </section>
+)}

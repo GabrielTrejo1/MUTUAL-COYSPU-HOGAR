@@ -1,0 +1,70 @@
+---
+/* Carrusel infinito de marcas. El conjunto se dibuja dos veces (la copia es
+   aria-hidden) para que el desplazamiento CSS sea continuo. Si hay pocas marcas
+   se repiten hasta tener al menos 8 por conjunto, para que no queden huecos. */
+interface Props {
+  /** [{ name, logo? }] — ver getBrands() en lib/sanity.js */
+  brands: { name: string; logo?: string | null }[];
+  title?: string;
+  eyebrow?: string;
+}
+
+const { brands, title = "Nuestras marcas", eyebrow = "Trabajamos con" } = Astro.props;
+
+const MIN = 8;
+const items =
+  brands.length === 0
+    ? []
+    : Array.from({ length: Math.max(brands.length, Math.ceil(MIN / brands.length) * brands.length) }, (_, i) => brands[i % brands.length]);
+---
+
+{items.length > 0 && (
+  <section class="section" aria-labelledby="marcas-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow eyebrow--dark">{eyebrow}</span>
+          <h2 id="marcas-title">{title}</h2>
+        </div>
+      </div>
+
+      <div class="brands">
+        <div class="brands__track">
+          <ul class="brands__set">
+            {items.map((b) => (
+              <li class="brand-logo">
+                {b.logo ? <img src={`${b.logo}?h=120&auto=format`} alt={b.name} height="60" loading="lazy" /> : b.name}
+              </li>
+            ))}
+          </ul>
+          <ul class="brands__set" aria-hidden="true">
+            {items.map((b) => (
+              <li class="brand-logo">
+                {b.logo ? <img src={`${b.logo}?h=120&auto=format`} alt="" height="60" loading="lazy" /> : b.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <button type="button" class="brands-toggle" aria-pressed="false">
+        <svg class="icon" aria-hidden="true" style="width:16px;height:16px"><use href="#i-play" /></svg>
+        <span>Pausar</span> carrusel
+      </button>
+    </div>
+  </section>
+)}
+
+<script>
+  const wrap = document.querySelector<HTMLElement>(".brands");
+  const btn = document.querySelector<HTMLButtonElement>(".brands-toggle");
+
+  if (wrap && btn) {
+    btn.addEventListener("click", () => {
+      const paused = wrap.classList.toggle("is-paused");
+      btn.setAttribute("aria-pressed", String(paused));
+      const label = btn.querySelector("span");
+      if (label) label.textContent = paused ? "Reanudar" : "Pausar";
+    });
+  }
+</script>

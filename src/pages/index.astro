@@ -1,16 +1,70 @@
 ---
+import Layout from "../layouts/Layout.astro";
+import Hero from "../components/Hero.astro";
+import ProductSection from "../components/ProductSection.astro";
+import CategoryGrid from "../components/CategoryGrid.astro";
+import BrandsSection from "../components/BrandsSection.astro";
+import AboutSection from "../components/AboutSection.astro";
+import {
+  categoryMeta,
+  getNewProducts,
+  getBestSellers,
+  getDepartments,
+  getFeaturedGroups,
+  getBrands,
+} from "../lib/sanity";
+
+/* Bloques "Destacados": uno por cada departamento que tenga productos, con banner
+   arriba y hasta FEATURED_LIMIT productos abajo (primero los marcados como
+   "Mostrar en Destacados", después el resto). Los colores y el lado del arte se alternan.
+   Si querés un texto propio para un departamento, agregalo en BANNER_TEXT (clave = slug). */
+const FEATURED_LIMIT = 4;
+const THEMES = ["leaf", "brown", "sand", "teal"];
+const BANNER_TEXT = {
+  bicicletas: "Para pedalear al trabajo, al campo o con los chicos.",
+  electrodomesticos: "Todo para que la casa funcione mejor: lavado, cocina y conservación de alimentos.",
+  muebles: "Living, dormitorio y comedor con diseño simple y materiales resistentes.",
+  tecnologia: "Pantallas, sonido y tecnología para disfrutar en casa.",
+};
+const fallbackText = (title) => `Mirá los productos destacados de ${title.toLowerCase()}.`;
+
+const [novedades, vendidos, departments, brands, featuredGroups] = await Promise.all([
+  getNewProducts(8),
+  getBestSellers(8),
+  getDepartments(),
+  getBrands(),
+  getFeaturedGroups(FEATURED_LIMIT),
+]);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout>
+  <Hero />
+
+  <ProductSection id="catalogo" eyebrow="Recién llegados" title="Productos novedades" products={novedades} />
+
+  <ProductSection eyebrow="Los favoritos" title="Más vendidos" variant="sand" products={vendidos} />
+
+  <CategoryGrid categories={departments} />
+
+  <div id="ofertas">
+    {featuredGroups.map((group, i) => (
+      <ProductSection
+        id={`dest-${group.slug}`}
+        products={group.products}
+        banner={{
+          title: group.title,
+          text: BANNER_TEXT[group.slug] ?? fallbackText(group.title),
+          theme: THEMES[i % THEMES.length],
+          icon: categoryMeta(group.slug).icon,
+          flip: false,
+          ctaLabel: `Ver ${group.title.toLowerCase()}`,
+          ctaHref: `/categorias/${group.slug}`,
+        }}
+      />
+    ))}
+  </div>
+
+  <BrandsSection brands={brands} />
+
+  <AboutSection />
+</Layout>

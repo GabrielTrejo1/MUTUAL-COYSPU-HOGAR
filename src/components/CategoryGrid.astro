@@ -1,0 +1,42 @@
+---
+/* Grilla "Nuestras categorías": cada tarjeta enlaza a /categorias/[slug] */
+import { categoryMeta } from "../lib/sanity";
+
+/* categories: [{ slug, title, count, parentSlug? }] (ver CATEGORY_FIELDS en lib/sanity.js) */
+interface Props {
+  categories: { slug: string; title: string; count?: number; parentSlug?: string | null }[];
+  title?: string;
+  eyebrow?: string;
+}
+
+const {
+  categories,
+  title = "Nuestras categorías",
+  eyebrow = "Explorá por ambiente",
+} = Astro.props;
+---
+
+{categories.length > 0 && (
+  <section class="section" aria-labelledby="categorias-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow eyebrow--dark">{eyebrow}</span>
+          <h2 id="categorias-title">{title}</h2>
+        </div>
+      </div>
+
+      <div class="category-grid">
+        {categories.map((c) => (
+          <a href={`/categorias/${c.slug}`} class="category-card">
+            <span class="category-card__icon">
+              <svg class="icon" aria-hidden="true"><use href={`#${categoryMeta(c.parentSlug ?? c.slug).icon}`} /></svg>
+            </span>
+            <h3>{c.title}</h3>
+            {(c.count ?? 0) > 0 && <span class="count">{c.count} {c.count === 1 ? "producto" : "productos"}</span>}
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
