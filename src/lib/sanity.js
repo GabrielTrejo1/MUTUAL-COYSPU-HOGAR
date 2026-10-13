@@ -41,11 +41,11 @@ export const sanity = createClient({
    catalog.css) según el slug del DEPARTAMENTO. Reemplazá las claves por los
    slugs reales de tus departamentos; los que no estén usan el valor por defecto. */
 const CATEGORY_META = {
-  bicicletas: { icon: "i-bike", tone: "tone-bicicletas" },
-  electrodomesticos: { icon: "i-washer", tone: "tone-electro" },
+  "deportes-and-tiempo-libre": { icon: "i-bike", tone: "tone-bicicletas" },
+  "grandes-electrodomesticos": { icon: "i-washer", tone: "tone-electro" },
   muebles: { icon: "i-sofa", tone: "tone-muebles" },
-  "tv-audio-video": { icon: "i-tv", tone: "tone-tv" },
-  tecnologia: { icon: "i-tv", tone: "tone-tv" },
+  "tecnologia-and-audio": { icon: "i-tv", tone: "tone-tv" },
+  televisores: { icon: "i-tv", tone: "tone-tv" },
   "cocina-y-bazar": { icon: "i-pot", tone: "tone-muebles" },
   climatizacion: { icon: "i-wind", tone: "tone-electro" },
 };
@@ -103,7 +103,7 @@ export function getNewProducts(limit = 8) {
     (hasta entonces devuelve [] y la sección no se muestra). */
 export function getBestSellers(limit = 8) {
   return sanity.fetch(
-    `*[_type == "product" && destacado == true] | order(_updatedAt desc)[0...$limit]{ ${PRODUCT_FIELDS} }`,
+    `*[_type == "product" && masVendido == true] | order(_updatedAt desc)[0...$limit]{ ${PRODUCT_FIELDS} }`,
     { limit }
   );
 }

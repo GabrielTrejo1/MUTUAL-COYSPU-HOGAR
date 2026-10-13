@@ -1,7 +1,7 @@
 ---
 /* Tarjeta de producto. Toda la tarjeta es clicable: el botón del título lleva
    los datos del producto en `data-product` y ProductModal.astro los lee. */
-   import { categoryMeta } from "../lib/sanity";
+import { categoryMeta } from "../lib/sanity";
 
 /* `product` es lo que devuelve PRODUCT_FIELDS en lib/sanity.js:
    { name, code, brand, badge, oldPrice, price, installments, description,
@@ -42,8 +42,14 @@ const hasDiscount = typeof oldPrice === "number" && oldPrice > price;
 const off = hasDiscount ? Math.round((1 - price / oldPrice) * 100) : 0;
 const hasInstallments = installments > 1;
 const perInstallment = hasInstallments ? fmt(Math.round(price / installments)) : "";
-// fit=max: Sanity solo reduce la imagen para que quepa en 800×800, sin recortarla
-const imageSrc = image ? `${image}?w=800&h=800&fit=max&auto=format` : undefined;
+// Todas las imágenes del producto (si no vino la lista, se usa solo la primera).
+// fit=max: Sanity solo reduce la imagen para que quepa, sin recortarla.
+const urls = (product.images?.length ? product.images : image ? [image] : []).filter(Boolean);
+const imageSrc = urls[0] ? `${urls[0]}?w=800&h=800&fit=max&auto=format` : undefined;
+const images = urls.map((u) => ({
+  src: `${u}?w=1000&h=1000&fit=max&auto=format`,   // imagen grande del modal
+  thumb: `${u}?w=160&h=160&fit=max&auto=format`,   // miniatura
+}));
 
 const badges = [];
 if (badge) badges.push({ label: badge });
@@ -57,7 +63,7 @@ const payload = {
   category: category?.title ?? "",
   tone: meta.tone,
   icon: meta.icon,
-  image: imageSrc ?? "",
+  images,
   badges,
   oldPrice: hasDiscount ? fmt(oldPrice) : "",
   price: fmt(price),

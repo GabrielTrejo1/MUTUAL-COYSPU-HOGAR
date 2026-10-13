@@ -438,7 +438,8 @@
 .modal__panel {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);   /* permite que la columna de datos haga scroll en vez de recortarse */
   width: min(100%, 940px);
   max-height: min(90vh, 700px);
   background: var(--c-cream);
@@ -465,15 +466,96 @@
 .modal__close:hover { background: var(--c-leaf); transform: rotate(90deg); }
 .modal__close .icon { width: 20px; height: 20px; stroke-width: 2; }
 
-.modal__media {
+/* Galería: [escenario con imagen + flechas + contador] y debajo las miniaturas.
+   El escenario tiene siempre una altura definida y la imagen va posicionada
+   dentro (absolute), así nunca puede desbordarse sobre los datos del producto. */
+.modal__gallery {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--c-on-dark);
+}
+.modal__stage {
   position: relative;
+  flex: 1;
+  min-height: 280px;
+  touch-action: pan-y;          /* el deslizamiento horizontal lo maneja la galería */
+}
+.modal__media {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  min-height: 280px;
   background: var(--tone, var(--c-sand));
 }
-.modal__media img { width: 100%; height: 100%; object-fit: contain; padding: 1.25rem; }
+.modal__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  padding: 1.25rem;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 .modal__media .badges { top: 1.2rem; left: 1.2rem; }
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border: 0; cursor: pointer;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--c-ink-strong);
+  box-shadow: var(--shadow-soft);
+  transition: background-color .2s ease, transform .2s ease;
+}
+.gallery-nav:hover { background: var(--c-leaf); }
+.gallery-nav--prev { left: 0.75rem; }
+.gallery-nav--next { right: 0.75rem; }
+.gallery-nav .icon { width: 18px; height: 18px; stroke-width: 2; }
+.gallery-nav--prev .icon { transform: rotate(180deg); }
+.gallery-nav[hidden], .gallery-count[hidden], .modal__thumbs[hidden] { display: none; }
+
+.gallery-count {
+  position: absolute;
+  right: 0.75rem; bottom: 0.75rem;
+  z-index: 2;
+  margin: 0;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--c-ink-strong) 78%, transparent);
+  color: var(--c-on-dark);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.modal__thumbs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  overflow-x: auto;
+  background: var(--c-on-dark);
+  border-top: 1px solid var(--c-sand);
+}
+.modal__thumbs button {
+  flex: none;
+  width: 58px; height: 58px;
+  padding: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 14px 4px 14px 4px;
+  background: var(--c-cream);
+  overflow: hidden;
+  transition: border-color .2s ease, opacity .2s ease;
+  opacity: 0.75;
+}
+.modal__thumbs button:hover { opacity: 1; }
+.modal__thumbs button[aria-current="true"] { border-color: var(--c-ink-strong); opacity: 1; }
+.modal__thumbs img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
 
 .modal__info {
   display: flex;
@@ -481,9 +563,11 @@
   gap: 1rem;
   padding: clamp(1.5rem, 3vw, 2.4rem);
   padding-top: 2.6rem;
+  padding-bottom: 0;
   overflow-y: auto;
 }
 .modal__code {
+  padding-right: 3rem;          /* deja libre el botón de cerrar */
   font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -544,10 +628,18 @@
   background: var(--c-leaf);
 }
 
+/* Contenedor del botón: pegado al borde inferior de la columna de datos, con fondo sólido
+   para tapar el texto que pasa por detrás (el espacio inferior de la columna lo aporta él) */
+.modal__cta {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  background: var(--c-cream);
+}
 .btn--whatsapp {
   justify-content: center;
   width: 100%;
-  margin-top: auto;
   padding: 1rem 1.6rem;
   background: var(--wa-green);
   color: var(--c-on-dark);
@@ -555,7 +647,7 @@
 }
 .btn--whatsapp:hover { background: var(--wa-green-hover); }
 .btn--whatsapp .icon { width: 26px; height: 26px; stroke-width: 1.7; }
-.modal__note { margin: -0.3rem 0 0; font-size: 0.78rem; color: var(--c-ink-soft); text-align: center; }
+.modal__note { margin: -0.4rem 0 0; padding-bottom: 1.2rem; font-size: 0.78rem; color: var(--c-ink-soft); text-align: center; }
 
 body.modal-open { overflow: hidden; }
 
@@ -579,21 +671,78 @@ body.modal-open { overflow: hidden; }
 
 @media (max-width: 760px) {
   .modal { padding: 0; align-items: end; }
+  /* Hoja inferior: la galería queda fija arriba con altura definida y solo
+     la columna de datos hace scroll, así la imagen no pisa precio ni texto. */
   .modal__panel {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     max-height: 94vh;
-    overflow-y: auto;
+    max-height: 94dvh;            /* dvh = alto visible real en celulares (descuenta la barra del navegador) */
     border-radius: 36px 36px 0 0;
   }
-  .modal__media { min-height: 0; aspect-ratio: 16 / 10; }
-  .modal__info { overflow: visible; padding-top: 1.5rem; }
-  .modal__info h2 { padding-right: 0; }
+  .modal__gallery { flex: none; }
+  .modal__stage {
+    flex: none;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+    max-height: 40vh;
+    max-height: 40dvh;
+  }
+  .modal__thumbs { padding: 0.55rem 1rem; }
+  .modal__thumbs button { width: 48px; height: 48px; }
+  .modal__info {
+    flex: 1;
+    min-height: 0;
+    gap: 0.75rem;                 /* en celular cada píxel vertical cuenta */
+    padding-top: 1.1rem;
+  }
+  .modal__info h2,
+  .modal__code { padding-right: 0; }   /* aquí el botón de cerrar queda sobre la imagen, no sobre el texto */
+}
+
+/* Celular apaisado (poca altura): galería y datos lado a lado, como en escritorio,
+   para que el precio y el botón se vean sin tener que desplazar. */
+@media (max-width: 760px) and (max-height: 520px) and (orientation: landscape) {
+  .modal { align-items: center; padding: 0.5rem; }
+  .modal__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    max-height: 96vh;
+    max-height: 96dvh;
+    border-radius: 28px 10px 28px 10px;
+  }
+  .modal__stage {
+    flex: 1;
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: 0;
+  }
+  .modal__info { padding: 2.6rem 1.1rem 0; }
+  .modal__info h2 { padding-right: 2.5rem; font-size: 1.1rem; }
+  .modal__code { font-size: 0.68rem; letter-spacing: 0.08em; padding-right: 2.6rem; }
+  .modal .price__now { font-size: 1.5rem; }
+  /* Botón más compacto para que quepa en una línea y no tape el precio */
+  .btn--whatsapp {
+    padding: 0.65rem 0.8rem;
+    font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+  .btn--whatsapp .icon { width: 22px; height: 22px; }
+}
+
+/* Celular vertical de poca altura (ej. 320×568): galería más baja para que entren el precio y el botón */
+@media (max-width: 760px) and (max-height: 600px) and (orientation: portrait) {
+  .modal__stage { max-height: 30vh; max-height: 30dvh; }
+  .modal__thumbs { padding: 0.4rem 1rem; }
+  .modal__thumbs button { width: 40px; height: 40px; }
 }
 
 @media (max-width: 560px) {
   .section { padding-block: var(--space-4); }
+  .btn--whatsapp { padding-inline: 0.9rem; font-size: 0.95rem; gap: 0.5rem; }
+  .btn--whatsapp .icon { width: 22px; height: 22px; }
   .section--sand { border-radius: 32px; }
   .product-grid { gap: var(--space-2); }
   .product-card__body { padding: 0.9rem 0.9rem 1.1rem; }

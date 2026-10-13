@@ -24,7 +24,22 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
       <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
     </button>
 
-    <div class="modal__media" id="modal-media"></div>
+    <!-- Galería: imagen + flechas + contador, y debajo las miniaturas -->
+    <div class="modal__gallery">
+      <div class="modal__stage">
+        <div class="modal__media" id="modal-media"></div>
+
+        <button type="button" class="gallery-nav gallery-nav--prev" id="modal-prev" data-gallery="-1" aria-label="Imagen anterior" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg>
+        </button>
+        <button type="button" class="gallery-nav gallery-nav--next" id="modal-next" data-gallery="1" aria-label="Imagen siguiente" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg>
+        </button>
+        <p class="gallery-count" id="modal-count" aria-live="polite" hidden></p>
+      </div>
+
+      <div class="modal__thumbs" id="modal-thumbs" role="group" aria-label="Imágenes del producto" hidden></div>
+    </div>
 
     <div class="modal__info">
       <span class="modal__code" id="modal-code"></span>
@@ -44,10 +59,13 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
       <p class="modal__desc" id="modal-desc"></p>
       <ul class="modal__specs" id="modal-specs"></ul>
 
-      <a class="btn btn--whatsapp" id="modal-wa" href="#" target="_blank" rel="noopener">
-        <svg class="icon" aria-hidden="true"><use href="#i-whatsapp" /></svg>
-        Consultar por WhatsApp
-      </a>
+      <!-- Contenedor pegajoso de fondo sólido: queda al pie mientras se desplazan los datos -->
+      <div class="modal__cta">
+        <a class="btn btn--whatsapp" id="modal-wa" href="#" target="_blank" rel="noopener">
+          <i class="fa-brands fa-whatsapp fa-2xl"></i>
+          Consultar por WhatsApp
+        </a>
+      </div>
       <p class="modal__note">Precios y stock sujetos a confirmación.</p>
     </div>
   </div>
@@ -61,7 +79,7 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
     category: string;
     tone: string;
     icon: string;
-    image: string;
+    images: { src: string; thumb: string }[];
     badges: { label: string; off?: boolean }[];
     oldPrice: string;
     price: string;
@@ -80,13 +98,20 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
 
     const panel = $(".modal__panel");
     const info = $(".modal__info");
+    const stage = $(".modal__stage");
     const media = $("#modal-media");
+    const prevBtn = $<HTMLButtonElement>("#modal-prev");
+    const nextBtn = $<HTMLButtonElement>("#modal-next");
+    const count = $("#modal-count");
+    const thumbs = $("#modal-thumbs");
     const waLink = $<HTMLAnchorElement>("#modal-wa");
     const waNumber = modal.dataset.wa ?? "";
     const store = modal.dataset.store ?? "";
 
     let current: Payload | null = null;
     let lastFocus: HTMLElement | null = null;
+    let mainImg: HTMLImageElement | null = null;
+    let index = 0;
 
     /* ----- helpers ----- */
     function iconEl(id: string) {
@@ -117,11 +142,31 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
       waLink.href = whatsappUrl(current, color);
     }
 
-    /* ----- rellenar ----- */
-    function fill(p: Payload) {
-      current = p;
+    /* ----- galería ----- */
+    function show(i: number) {
+      if (!current || !current.images.length || !mainImg) return;
+      const n = current.images.length;
+      index = ((i % n) + n) % n; // da la vuelta al llegar al final
 
-      // Imagen / placeholder + badges
+      mainImg.src = current.images[index].src;
+      mainImg.alt = n > 1 ? `${current.name} — imagen ${index + 1} de ${n}` : current.name;
+      count.textContent = `${index + 1} / ${n}`;
+
+      thumbs.querySelectorAll<HTMLButtonElement>("button").forEach((b, k) => {
+        if (k === index) b.setAttribute("aria-current", "true");
+        else b.removeAttribute("aria-current");
+      });
+      (thumbs.children[index] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+      // Precarga la siguiente para que el cambio sea instantáneo
+      if (n > 1) new Image().src = current.images[(index + 1) % n].src;
+    }
+
+    function buildGallery(p: Payload) {
+      const n = p.images.length;
+      const multi = n > 1;
+
+      // Escenario: badges + imagen (o ícono si no hay foto)
       media.className = `modal__media ${p.tone}`;
       media.replaceChildren();
       if (p.badges.length) {
@@ -135,14 +180,44 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
         });
         media.appendChild(wrap);
       }
-      if (p.image) {
-        const img = document.createElement("img");
-        img.src = p.image;
-        img.alt = p.name;
-        media.appendChild(img);
+      if (n > 0) {
+        mainImg = document.createElement("img");
+        mainImg.draggable = false;
+        media.appendChild(mainImg);
       } else {
+        mainImg = null;
         media.appendChild(iconEl(p.icon));
       }
+
+      // Controles: solo si hay más de una imagen
+      prevBtn.hidden = !multi;
+      nextBtn.hidden = !multi;
+      count.hidden = !multi;
+      thumbs.hidden = !multi;
+      thumbs.replaceChildren();
+      if (multi) {
+        p.images.forEach((im, k) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.dataset.index = String(k);
+          b.setAttribute("aria-label", `Ver imagen ${k + 1} de ${n}`);
+          const t = document.createElement("img");
+          t.src = im.thumb;
+          t.alt = "";
+          t.loading = "lazy";
+          b.appendChild(t);
+          thumbs.appendChild(b);
+        });
+      }
+
+      index = 0;
+      show(0);
+    }
+
+    /* ----- rellenar ----- */
+    function fill(p: Payload) {
+      current = p;
+      buildGallery(p);
 
       // Textos
       $("#modal-code").textContent = [p.category, p.brand, p.code && `Cód. ${p.code}`].filter(Boolean).join(" · ");
@@ -194,8 +269,6 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
         waLink.href = whatsappUrl(p, "");
       }
 
-      panel.scrollTop = 0;
-      info.scrollTop = 0;
     }
 
     /* ----- abrir / cerrar ----- */
@@ -205,6 +278,11 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
       modal!.classList.add("is-open");
       modal!.setAttribute("aria-hidden", "false");
       document.body.classList.add("modal-open");
+      // El scroll se reinicia DESPUÉS de mostrar el modal: mientras está en display:none
+      // el navegador lo ignora y el producto nuevo heredaba el scroll del anterior.
+      panel.scrollTop = 0;
+      info.scrollTop = 0;
+      thumbs.scrollLeft = 0;
       $<HTMLButtonElement>(".modal__close").focus();
     }
 
@@ -250,6 +328,16 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
         close();
         return;
       }
+      const arrow = target.closest<HTMLElement>("[data-gallery]");
+      if (arrow) {
+        show(index + Number(arrow.dataset.gallery));
+        return;
+      }
+      const thumb = target.closest<HTMLElement>(".modal__thumbs button");
+      if (thumb) {
+        show(Number(thumb.dataset.index));
+        return;
+      }
       const sw = target.closest<HTMLButtonElement>(".swatch-picker button");
       if (sw) setColor(Number(sw.dataset.color));
     });
@@ -257,7 +345,30 @@ const store = (import.meta.env.PUBLIC_STORE_NAME as string | undefined) ?? "Mutu
     document.addEventListener("keydown", (e) => {
       if (!modal.classList.contains("is-open")) return;
       if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") show(index - 1);
+      else if (e.key === "ArrowRight") show(index + 1);
       else trapFocus(e);
     });
+
+    // Deslizar con el dedo sobre la imagen para cambiar de foto
+    let startX = 0;
+    let startY = 0;
+    stage.addEventListener(
+      "touchstart",
+      (e) => {
+        startX = e.changedTouches[0].clientX;
+        startY = e.changedTouches[0].clientY;
+      },
+      { passive: true }
+    );
+    stage.addEventListener(
+      "touchend",
+      (e) => {
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(index + (dx < 0 ? 1 : -1));
+      },
+      { passive: true }
+    );
   }
 </script>
