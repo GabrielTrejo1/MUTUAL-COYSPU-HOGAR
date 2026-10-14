@@ -1,11 +1,19 @@
 ---
 /* Barra de navegación responsive. Los enlaces usan rutas absolutas ("/#…")
-   para funcionar también desde las páginas de categoría. */
+   para funcionar también desde las páginas de categoría.
+   "Productos" abre, al hacer clic, un panel con los departamentos y sus subcategorías
+   (se leen de Sanity con getCategoryTree). Si no hay categorías, queda como un enlace común. */
+import "../styles/nav-mega.css";
+import { categoryMeta, getCategoryTree } from "../lib/sanity";
+
 const { pathname } = Astro.url;
+
+const tree = await getCategoryTree();
+const inProducts = pathname.startsWith("/categorias");
 
 const links = [
   { href: "/", label: "Inicio" },
-  { href: "/#catalogo", label: "Catálogo" },
+  { href: "/#productos", label: "Productos", menu: true },
   { href: "/#ofertas", label: "Ofertas" },
   { href: "/#nosotros", label: "Nosotros" },
   { href: "/#contacto", label: "Contacto" },
@@ -25,13 +33,55 @@ const links = [
     <div class="nav__menu" id="menu">
       <nav aria-label="Principal">
         <ul class="nav__links">
-          {links.map((l) => (
-            <li>
-              <a href={l.href} aria-current={l.href === "/" && pathname === "/" ? "page" : undefined}>
-                {l.label}
-              </a>
-            </li>
-          ))}
+          {links.map((l) =>
+            l.menu && tree.length > 0 ? (
+              <li class="nav__item nav__item--has-menu">
+                <button
+                  type="button"
+                  class:list={["nav__dropdown-toggle", inProducts && "is-current"]}
+                  aria-expanded="false"
+                  aria-controls="mega-menu"
+                >
+                  {l.label}
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                </button>
+
+                <div class="mega" id="mega-menu" hidden>
+                  <div class="container">
+                    <div class="mega__grid">
+                      {tree.map((cat) => (
+                        <div class="mega__col">
+                          <a class="mega__parent" href={`/categorias/${cat.slug}`}>
+                            <span class="mega__icon" aria-hidden="true">
+                              <svg class="icon"><use href={`#${categoryMeta(cat.slug).icon}`} /></svg>
+                            </span>
+                            {cat.title}
+                          </a>
+                          {(cat.children ?? []).length > 0 && (
+                            <ul class="mega__children">
+                              {cat.children.map((sub) => (
+                                <li><a href={`/categorias/${sub.slug}`}>{sub.title}</a></li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <a class="mega__all" href={l.href}>
+                      Ver todos los productos
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                    </a>
+                  </div>
+                </div>
+              </li>
+            ) : (
+              <li>
+                <a href={l.href} aria-current={l.href === "/" && pathname === "/" ? "page" : undefined}>
+                  {l.label}
+                </a>
+              </li>
+            )
+          )}
         </ul>
       </nav>
       <a href="/#contacto" class="btn nav__cta">Consultar</a>
@@ -40,15 +90,39 @@ const links = [
 </header>
 
 <script>
-  // Menú móvil: abrir/cerrar
   const toggle = document.querySelector<HTMLButtonElement>(".nav__toggle");
   const menu = document.getElementById("menu");
+  const dropdown = document.querySelector<HTMLButtonElement>(".nav__dropdown-toggle");
+  const mega = document.getElementById("mega-menu");
 
+  /* ----- Submenú "Productos" ----- */
+  const setMega = (open: boolean) => {
+    if (!dropdown || !mega) return;
+    dropdown.setAttribute("aria-expanded", String(open));
+    mega.hidden = !open;
+  };
+
+  if (dropdown && mega) {
+    dropdown.addEventListener("click", () => {
+      setMega(dropdown.getAttribute("aria-expanded") !== "true");
+    });
+    // Clic fuera del submenú → se cierra
+    document.addEventListener("click", (e) => {
+      if (!(e.target as HTMLElement).closest(".nav__item--has-menu")) setMega(false);
+    });
+    // Elegir una categoría → se cierra
+    mega.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("a")) setMega(false);
+    });
+  }
+
+  /* ----- Menú móvil: abrir/cerrar ----- */
   if (toggle && menu) {
     const setOpen = (open: boolean) => {
       toggle.setAttribute("aria-expanded", String(open));
       toggle.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
       menu.classList.toggle("is-open", open);
+      if (!open) setMega(false);
     };
 
     toggle.addEventListener("click", () => {
@@ -57,8 +131,20 @@ const links = [
     menu.addEventListener("click", (e) => {
       if ((e.target as HTMLElement).closest("a")) setOpen(false);
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") setOpen(false);
-    });
   }
+
+  /* ----- Esc: primero cierra el submenú (y devuelve el foco), después el menú móvil ----- */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (mega && !mega.hidden) {
+      setMega(false);
+      dropdown?.focus();
+      return;
+    }
+    if (toggle && toggle.getAttribute("aria-expanded") === "true") {
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Abrir menú");
+      menu?.classList.remove("is-open");
+    }
+  });
 </script>

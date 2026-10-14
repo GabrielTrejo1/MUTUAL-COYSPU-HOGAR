@@ -45,7 +45,7 @@ const CATEGORY_META = {
   "grandes-electrodomesticos": { icon: "i-washer", tone: "tone-electro" },
   muebles: { icon: "i-sofa", tone: "tone-muebles" },
   "tecnologia-and-audio": { icon: "i-tv", tone: "tone-tv" },
-  televisores: { icon: "i-tv", tone: "tone-tv" },
+  tecnologia: { icon: "i-tv", tone: "tone-tv" },
   "cocina-y-bazar": { icon: "i-pot", tone: "tone-muebles" },
   climatizacion: { icon: "i-wind", tone: "tone-electro" },
 };
@@ -103,7 +103,7 @@ export function getNewProducts(limit = 8) {
     (hasta entonces devuelve [] y la sección no se muestra). */
 export function getBestSellers(limit = 8) {
   return sanity.fetch(
-    `*[_type == "product" && masVendido == true] | order(_updatedAt desc)[0...$limit]{ ${PRODUCT_FIELDS} }`,
+    `*[_type == "product" && destacado == true] | order(_updatedAt desc)[0...$limit]{ ${PRODUCT_FIELDS} }`,
     { limit }
   );
 }
@@ -140,6 +140,27 @@ export function getDepartments() {
   return sanity.fetch(
     `*[_type == "category" && !defined(categoriaPadre)] | order(nombre asc){ ${CATEGORY_FIELDS} }`
   );
+}
+
+/** Árbol para el menú "Productos" del Nav: departamentos con sus subcategorías.
+    [{ slug, title, children: [{ slug, title }] }]
+    En el build se consulta una sola vez y se reutiliza en todas las páginas;
+    en desarrollo (npm run dev) se consulta siempre, para ver los cambios del CMS. */
+let categoryTreeCache;
+export function getCategoryTree() {
+  const run = () =>
+    sanity.fetch(
+      `*[_type == "category" && !defined(categoriaPadre) && defined(slug.current)] | order(nombre asc){
+         "slug": slug.current,
+         "title": nombre,
+         "children": *[_type == "category" && categoriaPadre._ref == ^._id && defined(slug.current)] | order(nombre asc){
+           "slug": slug.current,
+           "title": nombre
+         }
+       }`
+    );
+  if (import.meta.env.DEV) return run();
+  return (categoryTreeCache ??= run());
 }
 
 /** Subcategorías directas de una categoría. */
