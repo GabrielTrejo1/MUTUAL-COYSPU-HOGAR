@@ -1,0 +1,23 @@
+---
+/* Página /mas-vendidos: todos los productos más vendidos, con los mismos filtros que las categorías. */
+import Layout from "../layouts/Layout.astro";
+import ProductSection from "../components/ProductSection.astro";
+import { getBestSellers } from "../lib/sanity";
+
+const products = await getBestSellers();
+---
+
+<Layout
+  title="Más vendidos — Mutual Coyspu Hogar"
+  description="Más vendidos de Mutual Coyspu Hogar."
+>
+  <ProductSection
+    eyebrow="Los favoritos"
+    title="Más vendidos"
+    products={products}
+    filterable
+    emptyMessage="Todavía no hay productos en esta lista."
+    href="/"
+    hrefLabel="Volver al inicio"
+  />
+</Layout>

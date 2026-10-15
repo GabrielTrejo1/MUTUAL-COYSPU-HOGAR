@@ -1,0 +1,23 @@
+---
+/* Página /ofertas: todos los productos en oferta, con los mismos filtros que las categorías. */
+import Layout from "../layouts/Layout.astro";
+import ProductSection from "../components/ProductSection.astro";
+import { getOfferProducts } from "../lib/sanity";
+
+const products = await getOfferProducts();
+---
+
+<Layout
+  title="Ofertas — Mutual Coyspu Hogar"
+  description="Ofertas de Mutual Coyspu Hogar."
+>
+  <ProductSection
+    eyebrow="Aprovechá"
+    title="Ofertas"
+    products={products}
+    filterable
+    emptyMessage="Por ahora no hay productos en oferta."
+    href="/"
+    hrefLabel="Volver al inicio"
+  />
+</Layout>

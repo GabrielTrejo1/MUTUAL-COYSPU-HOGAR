@@ -3,7 +3,7 @@
    para funcionar también desde las páginas de categoría.
    "Productos" abre, al hacer clic, un panel con los departamentos y sus subcategorías
    (se leen de Sanity con getCategoryTree). Si no hay categorías, queda como un enlace común. */
-import "../styles/nav-mega.css";
+   import "../styles/nav-mega.css";
 import { categoryMeta, getCategoryTree } from "../lib/sanity";
 
 const { pathname } = Astro.url;
@@ -13,8 +13,8 @@ const inProducts = pathname.startsWith("/categorias");
 
 const links = [
   { href: "/", label: "Inicio" },
-  { href: "/#productos", label: "Categorias", menu: true },
-  { href: "/#ofertas", label: "Ofertas" },
+  { href: "/#productos", label: "Productos", menu: true },
+  { href: "/ofertas", label: "Ofertas" },
   { href: "/#nosotros", label: "Nosotros" },
   { href: "/#contacto", label: "Contacto" },
 ];
@@ -76,7 +76,7 @@ const links = [
               </li>
             ) : (
               <li>
-                <a href={l.href} aria-current={l.href === "/" && pathname === "/" ? "page" : undefined}>
+                <a href={l.href} aria-current={pathname.replace(/(.)\/$/, "$1") === l.href ? "page" : undefined}>
                   {l.label}
                 </a>
               </li>

@@ -1,0 +1,23 @@
+---
+/* Página /novedades: todos los productos nuevos, con los mismos filtros que las categorías. */
+import Layout from "../layouts/Layout.astro";
+import ProductSection from "../components/ProductSection.astro";
+import { getNewProducts } from "../lib/sanity";
+
+const products = await getNewProducts();
+---
+
+<Layout
+  title="Productos novedades — Mutual Coyspu Hogar"
+  description="Productos novedades de Mutual Coyspu Hogar."
+>
+  <ProductSection
+    eyebrow="Recién llegados"
+    title="Productos novedades"
+    products={products}
+    filterable
+    emptyMessage="Todavía no hay productos nuevos."
+    href="/"
+    hrefLabel="Volver al inicio"
+  />
+</Layout>
