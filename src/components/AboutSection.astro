@@ -21,7 +21,7 @@ const {
     "Financiación pensada para socios",
     "Atención personalizada antes y después de comprar",
   ],
-  videoEmbedUrl,
+  videoEmbedUrl = "https://www.youtube.com/embed/gkKLWZwL5F0?si=AUcMCtMhlW8Fpr1f",
   videoCaption = "Video institucional — Mutual Coyspu Hogar",
 } = Astro.props;
 ---
@@ -74,7 +74,7 @@ const {
       figure.replaceChildren(iframe);
     } else {
       const cap = figure.querySelector("figcaption");
-      if (cap) cap.textContent = "El video institucional estará disponible próximamente.";
+      if (cap) cap.textContent = "Este video estará disponible próximamente.";
     }
   });
 </script>
