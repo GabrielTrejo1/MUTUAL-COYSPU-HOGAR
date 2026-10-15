@@ -41,6 +41,7 @@ const back = category.parent
     eyebrow={hasChildren ? "Todos los productos" : "Categoría"}
     title={hasChildren ? `Todo en ${category.title}` : category.title}
     products={products}
+    filterable
     emptyMessage="Todavía no hay productos en esta categoría."
     href={back.href}
     hrefLabel={back.label}

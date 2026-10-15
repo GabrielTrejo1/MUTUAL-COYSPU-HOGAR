@@ -1,12 +1,12 @@
 ---
 /* Tarjeta de producto. Toda la tarjeta es clicable: el botón del título lleva
    los datos del producto en `data-product` y ProductModal.astro los lee. */
-import { categoryMeta } from "../lib/sanity";
+   import { categoryMeta } from "../lib/sanity";
 
 /* `product` es lo que devuelve PRODUCT_FIELDS en lib/sanity.js:
    { name, code, brand, badge, oldPrice, price, installments, description,
      features, attributes, warranty, colors, image, category } */
-const { product } = Astro.props;
+const { product, filter } = Astro.props;   // `filter` (opcional): datos para los filtros de la categoría
 const {
   name, code, brand, badge, oldPrice, price, installments, description, image, category, warranty,
 } = product;
@@ -75,7 +75,7 @@ const payload = {
 };
 ---
 
-<article class="product-card">
+<article class="product-card" data-f={filter ? JSON.stringify(filter) : undefined}>
   <div class={`product-card__media ${meta.tone}`}>
     {badges.length > 0 && (
       <div class="badges">
@@ -114,8 +114,6 @@ const payload = {
     {hasInstallments && (
       <p class="installments">
         {installments} cuotas sin interés de <strong>{perInstallment}</strong>
-        <br>
-        <span>Con <strong>Tarjeta Coyspu</strong></span>
       </p>
     )}
   </div>

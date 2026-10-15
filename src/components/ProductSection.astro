@@ -3,7 +3,8 @@
    - Normal: encabezado (eyebrow + título + enlace opcional) y grilla.
    - Destacados: si se pasa `banner`, se muestra el banner arriba de la grilla.
    Si no hay productos (y no se pasó `emptyMessage`) la sección no se dibuja. */
-import ProductCard from "./ProductCard.astro";
+   import ProductCard from "./ProductCard.astro";
+import ProductCatalog from "./ProductCatalog.astro";
 
 export interface Banner {
   title: string;
@@ -30,6 +31,8 @@ interface Props {
   hrefLabel?: string;
   banner?: Banner;
   emptyMessage?: string;
+  /** con filtros (precio, marca, cuotas y atributos); se usa en las páginas de categoría */
+  filterable?: boolean;
 }
 
 const {
@@ -42,6 +45,7 @@ const {
   hrefLabel = "Ver todo",
   banner,
   emptyMessage,
+  filterable = false,
 } = Astro.props;
 
 const slugify = (s: string) =>
@@ -91,7 +95,9 @@ const ctaClass = banner?.theme === "brown" ? "btn btn--leaf" : "btn btn--dark";
         </div>
       )}
 
-      {products.length > 0 ? (
+      {products.length > 0 && filterable ? (
+        <ProductCatalog products={products} />
+      ) : products.length > 0 ? (
         <div class="product-grid">
           {products.map((p) => <ProductCard product={p} />)}
         </div>

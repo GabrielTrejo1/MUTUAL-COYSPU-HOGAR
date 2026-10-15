@@ -1,0 +1,328 @@
+---
+/* Grilla de productos con filtros (páginas de categoría).
+   Los grupos de filtro se calculan acá, en el build, con los productos de la
+   categoría (ver lib/filters.js); el filtrado en sí ocurre en el navegador, sin
+   recargar la página.
+   Si hay un solo producto o nada para filtrar, se muestra la grilla sin panel. */
+import "../styles/filters.css";
+import ProductCard from "./ProductCard.astro";
+import { buildFacets, cardFilterData } from "../lib/filters";
+
+const { products } = Astro.props;
+
+const facets = buildFacets(products);
+const total = products.length;
+const money = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
+
+// Cuántos productos hay por cuota / marca / valor (el script los recalcula al filtrar)
+const instCount = (n) => products.filter((p) => Number(p.installments) >= n).length;
+---
+
+{facets.any ? (
+  <div class="catalog" data-catalog data-total={total}>
+    <div class="catalog__toolbar">
+      <p class="catalog__count" aria-live="polite"><span data-count>{total}</span> <span data-word>{total === 1 ? "producto" : "productos"}</span></p>
+      <button type="button" class="catalog__open" data-open aria-controls="filters-panel" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        Filtros
+        <span class="catalog__badge" data-badge hidden>0</span>
+      </button>
+    </div>
+
+    <div class="catalog__chips" data-chips hidden></div>
+
+    <div class="catalog__layout">
+      <div class="filters-backdrop" data-backdrop hidden></div>
+
+      <aside class="filters" id="filters-panel" aria-label="Filtros de productos" data-panel>
+        <div class="filters__head">
+          <h3>Filtros</h3>
+          <button type="button" class="filters__clear" data-clear hidden>Limpiar</button>
+          <button type="button" class="filters__close" data-close aria-label="Cerrar filtros">
+            <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
+          </button>
+        </div>
+
+        <form class="filters__body" data-form novalidate onsubmit="return false">
+          {facets.show.price && (
+            <details class="filter" open>
+              <summary>Precio</summary>
+              <div class="filter__content">
+                <div class="price-range">
+                  <label>
+                    <span>Mínimo</span>
+                    <span class="price-range__field">$<input type="number" inputmode="numeric" min="0" step="1" data-price="min" placeholder={money.format(facets.price.min)} aria-label="Precio mínimo" /></span>
+                  </label>
+                  <span class="price-range__sep" aria-hidden="true">–</span>
+                  <label>
+                    <span>Máximo</span>
+                    <span class="price-range__field">$<input type="number" inputmode="numeric" min="0" step="1" data-price="max" placeholder={money.format(facets.price.max)} aria-label="Precio máximo" /></span>
+                  </label>
+                </div>
+              </div>
+            </details>
+          )}
+
+          {facets.show.brand && (
+            <details class="filter" open data-label="Marca">
+              <summary>Marca</summary>
+              <div class="filter__content">
+                {facets.brands.map((b, i) => (
+                  <label class:list={["opt", i >= 6 && "opt--extra"]}>
+                    <input type="checkbox" data-group="brand" value={b.value} />
+                    <span class="opt__label">{b.label}</span>
+                    <span class="opt__n" data-n>{b.count}</span>
+                  </label>
+                ))}
+                {facets.brands.length > 6 && <button type="button" class="filter__more" data-more>Ver más</button>}
+              </div>
+            </details>
+          )}
+
+          {facets.show.installments && (
+            <details class="filter" open data-label="Cuotas">
+              <summary>Cuotas sin interés</summary>
+              <div class="filter__content">
+                <label class="opt">
+                  <input type="radio" name="inst" data-group="inst" value="0" checked />
+                  <span class="opt__label">Todas</span>
+                </label>
+                {facets.installments.map((n) => (
+                  <label class="opt">
+                    <input type="radio" name="inst" data-group="inst" value={n} />
+                    <span class="opt__label">{facets.installments.length === 1 ? `${n} cuotas` : `${n} cuotas o más`}</span>
+                    <span class="opt__n" data-n>{instCount(n)}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {facets.specs.map((g) => (
+            <details class="filter" open data-label={g.label}>
+              <summary>{g.label}</summary>
+              <div class="filter__content">
+                {g.values.map((v, i) => (
+                  <label class:list={["opt", i >= 6 && "opt--extra"]}>
+                    <input type="checkbox" data-group={`attr:${g.key}`} value={v.value} />
+                    <span class="opt__label">{v.label}</span>
+                    <span class="opt__n" data-n>{v.count}</span>
+                  </label>
+                ))}
+                {g.values.length > 6 && <button type="button" class="filter__more" data-more>Ver más</button>}
+              </div>
+            </details>
+          ))}
+        </form>
+
+        <div class="filters__foot">
+          <button type="button" class="btn btn--dark" data-close>
+            <span>Ver <span data-count>{total}</span> <span data-word>{total === 1 ? "producto" : "productos"}</span></span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="catalog__results">
+        <div class="product-grid" data-grid>
+          {products.map((p) => <ProductCard product={p} filter={cardFilterData(p)} />)}
+        </div>
+        <div class="catalog__empty" data-empty hidden>
+          <p>No encontramos productos con esos filtros.</p>
+          <button type="button" class="btn btn--dark" data-clear>Limpiar filtros</button>
+        </div>
+      </div>
+    </div>
+  </div>
+) : (
+  <div class="product-grid">
+    {products.map((p) => <ProductCard product={p} />)}
+  </div>
+)}
+
+<script>
+  // @ts-nocheck
+  const root = document.querySelector("[data-catalog]");
+
+  if (root) {
+    const $ = (sel) => root.querySelector(sel);
+    const $$ = (sel) => [...root.querySelectorAll(sel)];
+
+    const panel = $("[data-panel]");
+    const backdrop = $("[data-backdrop]");
+    const openBtn = $("[data-open]");
+    const chipsBox = $("[data-chips]");
+    const badge = $("[data-badge]");
+    const emptyBox = $("[data-empty]");
+    const priceMin = $('[data-price="min"]');
+    const priceMax = $('[data-price="max"]');
+    const inputs = $$("input[data-group]");
+    const cards = $$("[data-f]").map((el) => ({ el, d: JSON.parse(el.dataset.f) }));
+    const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+    const plural = (n, one, many) => (n === 1 ? one : many);
+
+    const toNum = (v) => {
+      const n = parseFloat(String(v).replace(",", "."));
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
+
+    /* ----- Estado actual, leído de los controles ----- */
+    const readState = () => {
+      const sel = {}; // grupo → Set de valores marcados
+      let inst = 0;
+      for (const i of inputs) {
+        if (!i.checked) continue;
+        if (i.dataset.group === "inst") inst = Number(i.value);
+        else (sel[i.dataset.group] ??= new Set()).add(i.value);
+      }
+      return { sel, inst, min: priceMin ? toNum(priceMin.value) : null, max: priceMax ? toNum(priceMax.value) : null };
+    };
+
+    /* `skip`: grupo que se ignora (sirve para contar cuántos resultados daría cada opción) */
+    const matches = (d, st, skip) => {
+      if (skip !== "price") {
+        if (st.min !== null && d.price < st.min) return false;
+        if (st.max !== null && d.price > st.max) return false;
+      }
+      if (skip !== "inst" && st.inst && d.inst < st.inst) return false;
+      for (const [g, set] of Object.entries(st.sel)) {
+        if (g === skip) continue;
+        const v = g === "brand" ? d.brand : d.attrs[g.slice(5)];
+        if (!set.has(v)) return false;
+      }
+      return true;
+    };
+
+    const valueOf = (d, i) => {
+      const g = i.dataset.group;
+      if (g === "brand") return d.brand === i.value;
+      if (g === "inst") return Number(i.value) === 0 || d.inst >= Number(i.value);
+      return d.attrs[g.slice(5)] === i.value;
+    };
+
+    /* ----- Chips de filtros activos ----- */
+    const buildChips = (st) => {
+      const chips = [];
+      if (st.min !== null || st.max !== null) {
+        const text =
+          st.min !== null && st.max !== null ? `${money.format(st.min)} – ${money.format(st.max)}`
+          : st.min !== null ? `Desde ${money.format(st.min)}`
+          : `Hasta ${money.format(st.max)}`;
+        chips.push({ text: `Precio: ${text}`, remove: () => { priceMin.value = ""; priceMax.value = ""; } });
+      }
+      for (const i of inputs) {
+        if (!i.checked) continue;
+        const label = i.closest("label").querySelector(".opt__label").textContent.trim();
+        if (i.dataset.group === "inst") {
+          if (Number(i.value) === 0) continue;
+          chips.push({ text: `Cuotas: ${label}`, remove: () => { inputs.find((x) => x.dataset.group === "inst" && x.value === "0").checked = true; } });
+        } else {
+          const group = i.closest("details").dataset.label;
+          chips.push({ text: `${group}: ${label}`, remove: () => { i.checked = false; } });
+        }
+      }
+      return chips;
+    };
+
+    const renderChips = (chips) => {
+      chipsBox.replaceChildren();
+      for (const c of chips) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.textContent = c.text;
+        b.setAttribute("aria-label", `Quitar filtro ${c.text}`);
+        const x = document.createElement("span");
+        x.setAttribute("aria-hidden", "true");
+        x.textContent = "×";
+        b.append(x);
+        b.addEventListener("click", () => { c.remove(); apply(); });
+        chipsBox.append(b);
+      }
+      chipsBox.hidden = chips.length === 0;
+    };
+
+    /* ----- Aplicar filtros ----- */
+    function apply() {
+      const st = readState();
+
+      let shown = 0;
+      for (const c of cards) {
+        const ok = matches(c.d, st, null);
+        c.el.hidden = !ok;
+        if (ok) shown++;
+      }
+
+      // Cantidad de resultados de cada opción, según los demás filtros
+      for (const i of inputs) {
+        const g = i.dataset.group;
+        let n = 0;
+        for (const c of cards) if (matches(c.d, st, g) && valueOf(c.d, i)) n++;
+        const label = i.closest("label");
+        const out = label.querySelector("[data-n]");
+        if (out) out.textContent = String(n);
+        // "Todas" (cuotas) nunca se deshabilita: es la forma de volver atrás
+        const empty = n === 0 && !i.checked && !(g === "inst" && i.value === "0");
+        i.disabled = empty;
+        label.classList.toggle("is-empty", empty);
+      }
+
+      const chips = buildChips(st);
+      renderChips(chips);
+      badge.textContent = String(chips.length);
+      badge.hidden = chips.length === 0;
+      $("[data-clear]").hidden = chips.length === 0;
+
+      for (const el of $$("[data-count]")) el.textContent = String(shown);
+      for (const el of $$("[data-word]")) el.textContent = plural(shown, "producto", "productos");
+      emptyBox.hidden = shown > 0;
+    }
+
+    const clearAll = () => {
+      for (const i of inputs) i.checked = i.dataset.group === "inst" && i.value === "0";
+      if (priceMin) priceMin.value = "";
+      if (priceMax) priceMax.value = "";
+      apply();
+    };
+
+    root.addEventListener("change", (e) => { if (e.target.matches("input[data-group]")) apply(); });
+    let timer;
+    for (const p of [priceMin, priceMax]) {
+      p?.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(apply, 250); });
+    }
+    root.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-clear],[data-more],[data-open],[data-close]");
+      if (!t || !root.contains(t)) return;
+      if (t.matches("[data-clear]")) clearAll();
+      else if (t.matches("[data-more]")) {
+        const open = t.closest(".filter").classList.toggle("is-expanded");
+        t.textContent = open ? "Ver menos" : "Ver más";
+      } else if (t.matches("[data-open]")) openPanel();
+      else closePanel();
+    });
+
+    /* ----- Panel lateral en pantallas chicas ----- */
+    const mobile = window.matchMedia("(max-width: 900px)");
+    function openPanel() {
+      panel.classList.add("is-open");
+      backdrop.hidden = false;
+      document.body.classList.add("filters-lock");
+      openBtn.setAttribute("aria-expanded", "true");
+      panel.querySelector(".filters__close")?.focus();
+    }
+    function closePanel() {
+      const wasOpen = panel.classList.contains("is-open");
+      panel.classList.remove("is-open");
+      backdrop.hidden = true;
+      document.body.classList.remove("filters-lock");
+      openBtn.setAttribute("aria-expanded", "false");
+      if (wasOpen && mobile.matches) openBtn.focus();
+    }
+    backdrop.addEventListener("click", closePanel);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && panel.classList.contains("is-open")) closePanel();
+    });
+    mobile.addEventListener("change", () => { if (!mobile.matches) closePanel(); });
+
+    apply();
+  }
+</script>
