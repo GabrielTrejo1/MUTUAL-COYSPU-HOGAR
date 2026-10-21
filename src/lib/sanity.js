@@ -142,6 +142,58 @@
      );
    }
    
+   /* ---------- Hero: promoción y Tarjeta Coyspu ---------- */
+   
+   // Campos de imagen que usan los dos bloques (url + punto focal)
+   const HERO_MEDIA = /* groq */ `
+     "mode": coalesce(modo, "contenido"),
+     "image": imagen.asset->url,
+     "imageHotspot": imagen.hotspot,
+     "banner": bannerImagen.asset->url,
+     "bannerHotspot": bannerImagen.hotspot,
+     "bannerMobile": bannerImagenMobile.asset->url,
+     "alt": bannerAlt,
+     "href": enlace
+   `;
+   
+   /** Promoción destacada del hero: la primera activa y vigente según `orden`.
+       Devuelve null si no hay ninguna (el hero muestra entonces un bloque por defecto).
+       La vigencia (desde/hasta) se evalúa al compilar el sitio. */
+   export function getHeroPromotion() {
+     return sanity.fetch(
+       `*[_type == "promocion" && activa != false
+           && (!defined(desde) || desde <= now())
+           && (!defined(hasta) || hasta >= now())]
+         | order(coalesce(orden, 9999) asc, _updatedAt desc)[0]{
+           ${HERO_MEDIA},
+           "label": etiqueta,
+           "title": titulo,
+           "text": texto,
+           "buttonText": coalesce(botonTexto, "Ver promoción"),
+           "theme": coalesce(tema, "leaf"),
+           "until": hasta,
+           "category": categoria->{ "slug": slug.current, "parentSlug": categoriaPadre->slug.current }
+         }`
+     );
+   }
+   
+   /** Bloque "Tarjeta Coyspu" del hero (documento único; si hubiera más de uno, el editado más recientemente).
+       Devuelve null si todavía no se creó. */
+   export function getCardOffer() {
+     return sanity.fetch(
+       `*[_type == "tarjetaCoyspu"] | order(_updatedAt desc)[0]{
+         ${HERO_MEDIA},
+         "title": titulo,
+         "highlight": leyenda,
+         "text": texto,
+         "benefits": beneficios[defined(@)],
+         "imageAlt": imagen.alt,
+         "buttonText": coalesce(botonTexto, "Quiero mi tarjeta"),
+         "waMessage": mensajeWhatsApp
+       }`
+     );
+   }
+   
    /* ---------- Categorías ---------- */
    
    /** Departamentos (sin categoría padre): para la grilla "Nuestras categorías". */

@@ -1,0 +1,222 @@
+/* ==========================================================================
+   Hero (Hero.astro): fondo de marca a todo el ancho (estilos de styles.css) con tres bloques
+   "bento" encima.
+
+     ┌ hero (todo el ancho) ──────────────────────────────┐
+     │  ┌ presentación (foto) ─────┐ ┌ Tarjeta ─────┐     │
+     │  │ texto                    │ └──────────────┘     │
+     │  │                          │ ┌ promoción ───┐     │
+     │  │ [botón 1] [botón 2]      │ │ 1080 × 1350  │     │
+     │  └──────────────────────────┘ └──────────────┘     │
+     └──────────────┬─ barra de beneficios (.perks) ──────┘
+
+   Se importa desde Hero.astro después de styles.css. El fondo, los adornos y el borde inferior
+   redondeado siguen siendo los de styles.css; acá se define la grilla y las tarjetas.
+   ========================================================================== */
+
+/* Más bajo que antes: sin altura mínima y con menos relleno. El de abajo deja lugar a la barra de beneficios,
+   que se solapa 3.2rem con el borde del hero */
+   .hero {
+    min-height: 0;
+    display: block;
+    padding-block: var(--space-3) calc(var(--space-3) + 3.2rem);
+  }
+  
+  .hero__grid {
+    --side-w: clamp(280px, 26vw, 330px);   /* columna derecha: más angosta, para que la promo 4:5 no agrande el hero */
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side-w);
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+  
+  /* ----- Bloque 1: presentación (con foto del local de fondo) ----- */
+  .hero__pane {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    min-width: 0;
+    padding: clamp(1.5rem, 3.5vw, 3rem);
+    border-radius: 36px 8px 36px 8px;
+    overflow: hidden;
+    color: var(--c-on-dark);
+    /* Sin foto: color liso. Con foto (--pane-image): velo oscuro de izquierda a derecha para que el texto se lea */
+    background-color: color-mix(in srgb, var(--c-ink-strong) 78%, transparent);
+    background-image:
+      linear-gradient(100deg, rgba(40, 35, 31, 0.86) 0%, rgba(40, 35, 31, 0.6) 55%, rgba(40, 35, 31, 0.25) 100%),
+      var(--pane-image, none);
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-on-dark) 12%, transparent);
+  }
+  .hero__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;   /* texto arriba, botones abajo */
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 600px;
+  }
+  .hero h1 { font-size: clamp(2.1rem, 1.2rem + 3vw, 3.5rem); margin-bottom: var(--space-2); }
+  .hero__content p { margin-bottom: 0; }
+  
+  /* ----- Columna derecha: tarjeta (baja) + promoción (cuadrada) ----- */
+  .hero__side { display: grid; grid-template-rows: auto auto; align-content: space-between; gap: var(--space-2); min-width: 0; }
+  .hero__slot { display: grid; min-width: 0; }
+  
+  /* ----- Tarjetas (Tarjeta Coyspu y promoción) ----- */
+  .hero-card {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: 1rem 1.1rem;
+    border-radius: 32px 8px 32px 8px;
+    overflow: hidden;
+    color: var(--hc-fg, var(--c-ink-strong));
+    background-color: var(--hc-bg, var(--c-on-dark));
+  }
+  .hero-card[hidden] { display: none; }
+  .hero-card__body { min-width: 0; }
+  .hero-card .btn { padding: 0.45rem 1rem; font-size: 0.86rem; white-space: nowrap; }
+  
+  .hero-card__kicker,
+  .hero-card__chip {
+    display: inline-block;
+    margin: 0 0 0.4rem;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hero-card__chip { padding: 0.25rem 0.7rem; border-radius: var(--radius-pill); background: color-mix(in srgb, currentColor 14%, transparent); }
+  .hero-card__title {
+    margin: 0 0 0.4rem;
+    font-size: clamp(1.3rem, 1.05rem + 0.9vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.15;
+    color: inherit;
+  }
+  .hero-card__text { margin: 0 0 0.7rem; font-size: 0.92rem; line-height: 1.45; color: inherit; opacity: 0.9; }
+  /* ".hero p" (estilos del hero) no debe agrandar el texto de las tarjetas */
+  .hero .hero-card p { font-size: 0.88rem; max-width: 40ch; margin-bottom: 0.6rem; color: inherit; }
+  
+  /* Tarjeta Coyspu */
+  .hero-card--card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    right: -50px; bottom: -70px;
+    width: 190px; height: 190px;
+    border-radius: 62% 38% 55% 45% / 48% 58% 42% 52%;
+    background: var(--c-leaf-soft);
+    opacity: 0.8;
+  }
+  .hero-card__highlight {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-heading);
+    font-size: clamp(1.1rem, 1rem + 0.4vw, 1.3rem);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--c-ink-strong);
+  }
+  .hero .hero-card .hero-card__highlight { font-size: clamp(1.1rem, 1rem + 0.4vw, 1.3rem); max-width: none; margin-bottom: 0.35rem; }
+  /* La tarjeta es compacta: la lista de beneficios no se muestra (el campo sigue disponible en Sanity) */
+  .hero-card__benefits { display: none; }
+  .hero-card__benefits li { position: relative; padding-left: 1.2rem; font-size: 0.82rem; color: var(--c-ink); }
+  .hero-card__benefits li::before {
+    content: "";
+    position: absolute;
+    left: 0.12rem; top: 0.28em;
+    width: 0.36rem; height: 0.64rem;
+    border-right: 2px solid var(--c-ink-strong);
+    border-bottom: 2px solid var(--c-ink-strong);
+    transform: rotate(40deg);
+  }
+  /* Con lista de beneficios, el texto corto sobra: la tarjeta tiene que ser baja */
+  .hero-card--card .hero-card__benefits + .btn { margin-top: 0; }
+  /* La imagen de la tarjeta va arriba a la derecha; solo el título y la leyenda le dejan lugar,
+     el resto (texto, beneficios, botón) usa todo el ancho: así la tarjeta queda baja */
+  .hero-card--card { grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .hero-card--card .hero-card__kicker,
+  .hero-card--card .hero-card__highlight { margin-right: 5.2rem; }
+  .hero-card__media { position: absolute; top: 1rem; right: 1rem; width: 72px; display: grid; place-items: center; }
+  .hero-card__media img { width: 100%; height: auto; transform: rotate(-7deg); filter: drop-shadow(0 10px 12px rgba(30, 26, 22, 0.28)); }
+  /* Tarjeta dibujada mientras no haya imagen cargada */
+  .plastic {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1.586;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--c-brand), var(--c-ink-strong));
+    box-shadow: 0 10px 12px -6px rgba(30, 26, 22, 0.4);
+    transform: rotate(-7deg);
+  }
+  .plastic__chip { position: absolute; left: 14%; top: 24%; width: 22%; aspect-ratio: 1.25; border-radius: 4px; background: var(--c-leaf-soft); }
+  .plastic__line { position: absolute; left: 14%; right: 14%; bottom: 20%; height: 7%; border-radius: 99px; background: color-mix(in srgb, var(--c-on-dark) 45%, transparent); }
+  
+  /* Promoción: vertical 4:5 (1080 × 1350, formato de publicación de Instagram): la imagen se ve entera, sin recortes */
+  .hero-card--promo { aspect-ratio: 4 / 5; overflow: clip; /* con 'clip' el bloque crece si el texto es largo, en vez de cortarlo */ grid-template-columns: minmax(0, 1fr); align-content: end; padding: 1.4rem; }
+  .hero-card--leaf  { --hc-bg: var(--c-leaf);   --hc-fg: var(--c-ink-strong); }
+  .hero-card--brown { --hc-bg: var(--c-ink-strong); --hc-fg: var(--c-on-dark); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-on-dark) 16%, transparent); }   /* más oscuro que el fondo del hero, si no se confunde */
+  .hero-card--sand  { --hc-bg: #fff;            --hc-fg: var(--c-ink-strong); }
+  .hero-card--teal  { --hc-bg: var(--c-accent); --hc-fg: var(--c-ink-strong); }
+  .hero-card--promo.has-image {
+    --hc-fg: var(--c-on-dark);
+    background-image:
+      linear-gradient(0deg, rgba(40, 35, 31, 0.82) 0%, rgba(40, 35, 31, 0.3) 55%, rgba(40, 35, 31, 0) 100%),
+      var(--promo-image);
+    background-size: cover;
+    background-position: center, var(--promo-pos, center);
+  }
+  .hero-card--promo .hero-card__title { font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); }
+  .hero-card--promo .hero-card__text { max-width: 28ch; }
+  .hero-card__art {
+    position: absolute;
+    z-index: -1;
+    right: -22px; top: -22px;
+    display: grid;
+    place-items: center;
+    width: 62%;
+    aspect-ratio: 1;
+    border-radius: 62% 38% 55% 45% / 48% 58% 42% 52%;
+    background: color-mix(in srgb, currentColor 11%, transparent);
+  }
+  .hero-card__art .icon { width: 46%; height: 46%; stroke-width: 1.1; opacity: 0.8; }
+  
+  /* ----- Modo banner: una sola imagen, toda clicable. La imagen NO define la altura: se recorta (cover) ----- */
+  .hero-card--banner { display: block; padding: 0; background: var(--c-sand); }
+  .hero-card--banner picture { position: absolute; inset: 0; display: block; }
+  .hero-card--banner img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+  .hero-card--banner:hover img { transform: scale(1.03); }
+  .hero-card--banner:focus-visible { outline-offset: 4px; }
+  /* Tarjeta Coyspu en modo banner: apaisada (2:1). Promoción en modo banner: 4:5 (1080 × 1350) */
+  .hero__side > .hero-card--banner { aspect-ratio: 2 / 1; }
+  .hero__slot > .hero-card--banner { aspect-ratio: 4 / 5; }
+  
+  /* ----- Tablet: presentación arriba; tarjeta y promoción lado a lado ----- */
+  @media (max-width: 960px) {
+    .hero__grid { grid-template-columns: 1fr; }
+    .hero__side { grid-template-columns: minmax(0, 1fr) minmax(0, 320px); grid-template-rows: none; align-content: stretch; align-items: stretch; }
+    .hero__slot { min-height: 0; }
+    .hero__side > .hero-card--banner { aspect-ratio: auto; min-height: 150px; }
+    .hero-card--card { align-content: center; }
+  }
+  
+  /* ----- Celular: todo apilado ----- */
+  @media (max-width: 640px) {
+    .hero { padding-top: var(--space-3); }
+    .hero__grid, .hero__side { gap: 10px; }
+    .hero__side { grid-template-columns: 1fr; }
+    .hero__pane { padding: 1.4rem 1.2rem; border-radius: 26px 8px 26px 8px; }
+    .hero-card { border-radius: 26px 8px 26px 8px; }
+    .hero__side > .hero-card--banner { aspect-ratio: 2 / 1; }
+  }
+  
+  @media (prefers-reduced-motion: reduce) { .hero-card--banner img { transition: none; } }

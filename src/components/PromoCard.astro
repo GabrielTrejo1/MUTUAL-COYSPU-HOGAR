@@ -1,0 +1,92 @@
+---
+/* Bloque 3 del hero: promoción destacada. Datos de Sanity (getHeroPromotion).
+   Dos modos: "contenido" (etiqueta, título, texto, botón, color o imagen de fondo) o "banner"
+   (una sola imagen clicable). Sin promoción activa se muestra un acceso a /ofertas.
+   Si la promoción tiene fecha "hasta", un script mínimo la reemplaza por ese acceso cuando vence,
+   aunque la página no se haya vuelto a compilar. */
+import { categoryMeta } from "../lib/sanity";
+import { hotspotPos, imgUrl, isExternal } from "../lib/hero";
+
+const { promo } = Astro.props;
+
+const mode = promo?.mode === "banner" && promo?.banner ? "banner" : "contenido";
+const href =
+  promo?.href || (promo?.category?.slug ? `/categorias/${promo.category.slug}` : "/ofertas");
+const external = isExternal(href);
+const rel = external ? "noopener noreferrer" : undefined;
+const target = external ? "_blank" : undefined;
+
+const THEMES = ["leaf", "brown", "sand", "teal"];
+const theme = THEMES.includes(promo?.theme) ? promo.theme : "leaf";
+const hasImage = Boolean(promo?.image);
+const icon = promo?.category ? categoryMeta(promo.category.parentSlug ?? promo.category.slug).icon : null;
+const bg = hasImage
+  ? `--promo-image:url('${imgUrl(promo.image, 900)}');--promo-pos:${hotspotPos(promo.imageHotspot)}`
+  : undefined;
+---
+
+<div class="hero__slot" data-promo-slot>
+  {promo && (
+    mode === "banner" ? (
+      <a class="hero-card hero-card--banner" href={href} target={target} rel={rel} data-promo data-until={promo.until ?? undefined}>
+        <picture>
+          {promo.bannerMobile && <source media="(max-width: 560px)" srcset={imgUrl(promo.bannerMobile, 800)} />}
+          <img
+            src={imgUrl(promo.banner, 1000)}
+            alt={promo.alt ?? ""}
+            style={`object-position:${hotspotPos(promo.bannerHotspot)}`}
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
+      </a>
+    ) : (
+      <article
+        class:list={["hero-card", "hero-card--promo", `hero-card--${theme}`, hasImage && "has-image"]}
+        style={bg}
+        data-promo
+        data-until={promo.until ?? undefined}
+        aria-labelledby="promo-title"
+      >
+        <div class="hero-card__body">
+          {promo.label && <span class="hero-card__chip">{promo.label}</span>}
+          <h2 class="hero-card__title" id="promo-title">{promo.title}</h2>
+          {promo.text && <p class="hero-card__text">{promo.text}</p>}
+          <a class:list={["btn", theme === "brown" || hasImage ? "btn--leaf" : "btn--dark"]} href={href} target={target} rel={rel}>
+            {promo.buttonText}
+            <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+          </a>
+        </div>
+        {icon && !hasImage && (
+          <div class="hero-card__art" aria-hidden="true">
+            <svg class="icon"><use href={`#${icon}`} /></svg>
+          </div>
+        )}
+      </article>
+    )
+  )}
+
+  <article class="hero-card hero-card--promo hero-card--leaf" data-promo-fallback hidden={promo ? true : undefined} aria-labelledby="promo-fallback-title">
+    <div class="hero-card__body">
+      <span class="hero-card__chip">Ofertas</span>
+      <h2 class="hero-card__title" id="promo-fallback-title">Mirá las ofertas vigentes</h2>
+      <p class="hero-card__text">Productos con precio de promoción, por tiempo limitado.</p>
+      <a class="btn btn--dark" href="/ofertas">
+        Ver ofertas
+        <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+      </a>
+    </div>
+  </article>
+</div>
+
+<script>
+  // Promoción vencida (sin recompilar el sitio) → se muestra el acceso a /ofertas
+  document.querySelectorAll<HTMLElement>("[data-promo-slot]").forEach((slot) => {
+    const promo = slot.querySelector<HTMLElement>("[data-promo]");
+    const until = promo?.dataset.until ? Date.parse(promo.dataset.until) : NaN;
+    if (promo && Number.isFinite(until) && until < Date.now()) {
+      promo.hidden = true;
+      slot.querySelector<HTMLElement>("[data-promo-fallback]")?.removeAttribute("hidden");
+    }
+  });
+</script>

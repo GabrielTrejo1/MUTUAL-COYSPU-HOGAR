@@ -1,0 +1,68 @@
+---
+/* Bloque 2 del hero: "Tarjeta Coyspu". Datos de Sanity (getCardOffer).
+   Dos modos: "contenido" (textos editables + imagen de la tarjeta) o "banner" (una sola imagen
+   clicable). Si el documento todavía no existe, o el modo banner no tiene imagen, se muestran
+   textos por defecto, así el bloque nunca queda vacío. */
+import { hotspotPos, imgUrl, isExternal, whatsappHref } from "../lib/hero";
+
+const { card } = Astro.props;
+
+const whatsapp = (import.meta.env.PUBLIC_WHATSAPP_NUMBER as string | undefined) ?? "";
+
+const mode = card?.mode === "banner" && card?.banner ? "banner" : "contenido";
+const c = {
+  title: card?.title || "Tarjeta Coyspu",
+  highlight: card?.highlight || "10 o más cuotas sin interés",
+  text: card?.text || "",
+  benefits: (card?.benefits ?? []).filter(Boolean).slice(0, 3),
+  buttonText: card?.buttonText || "Quiero mi tarjeta",
+};
+const href =
+  card?.href || whatsappHref(whatsapp, card?.waMessage || "Hola, quiero sacar la Tarjeta Coyspu");
+const external = isExternal(href);
+const rel = external ? "noopener noreferrer" : undefined;
+const target = external ? "_blank" : undefined;
+---
+
+{mode === "banner" ? (
+  <a class="hero-card hero-card--banner" href={href} target={target} rel={rel}>
+    <picture>
+      {card.bannerMobile && <source media="(max-width: 560px)" srcset={imgUrl(card.bannerMobile, 800)} />}
+      <img
+        src={imgUrl(card.banner, 1000)}
+        alt={card.alt ?? ""}
+        style={`object-position:${hotspotPos(card.bannerHotspot)}`}
+        loading="eager"
+        decoding="async"
+      />
+    </picture>
+  </a>
+) : (
+  <article class="hero-card hero-card--card" aria-labelledby="card-cta-title">
+    <div class="hero-card__body">
+      <h2 class="hero-card__kicker" id="card-cta-title">{c.title}</h2>
+      <p class="hero-card__highlight">{c.highlight}</p>
+      {c.text && <p class="hero-card__text">{c.text}</p>}
+      {c.benefits.length > 0 && (
+        <ul class="hero-card__benefits">
+          {c.benefits.map((b) => <li>{b}</li>)}
+        </ul>
+      )}
+      <a class="btn btn--dark" href={href} target={target} rel={rel}>
+        {c.buttonText}
+        <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+      </a>
+    </div>
+
+    <div class="hero-card__media" aria-hidden={card?.image ? undefined : "true"}>
+      {card?.image ? (
+        <img src={imgUrl(card.image, 520)} alt={card.imageAlt ?? ""} loading="eager" decoding="async" />
+      ) : (
+        <span class="plastic">
+          <span class="plastic__chip"></span>
+          <span class="plastic__line"></span>
+        </span>
+      )}
+    </div>
+  </article>
+)}

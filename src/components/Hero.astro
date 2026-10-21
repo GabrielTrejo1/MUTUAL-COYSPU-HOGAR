@@ -1,10 +1,27 @@
 ---
-/* Hero + tira de beneficios ("logos informativos") que se solapa con su borde inferior. */
+/* Hero a todo el ancho con tres bloques "bento" encima + tira de beneficios que se solapa con su borde inferior:
+     1. Presentación (texto + botones), con una foto del local de fondo (opcional)
+     2. Tarjeta Coyspu (CardCta.astro, datos de Sanity)
+     3. Promoción destacada (PromoCard.astro, datos de Sanity; imagen 1080 × 1035)
+
+   Foto del bloque de presentación: guardala como  public/img/hero-local.jpg  (o pasá otra ruta con
+   la prop `image`). Si el archivo no existe, el bloque queda con un color liso. */
+import { existsSync } from "node:fs";
+import "../styles/hero.css";
+import CardCta from "./CardCta.astro";
+import PromoCard from "./PromoCard.astro";
+import { getCardOffer, getHeroPromotion } from "../lib/sanity";
+
 interface Props {
-  /** URL de la imagen de fondo (ej. importada desde src/assets o /public) */
+  /** Ruta pública de la foto del bloque de presentación, ej. "/img/hero-local.jpg" */
   image?: string;
 }
-const { image } = Astro.props;
+const { image = "/img/hero-local.jpg" } = Astro.props;
+
+// Solo se usa la foto si el archivo existe en /public (así no hay un 404 mientras no la cargues)
+const photo = existsSync(`public${image}`) ? image : undefined;
+
+const [card, promo] = await Promise.all([getCardOffer(), getHeroPromotion()]);
 
 const perks = [
   {
@@ -13,8 +30,8 @@ const perks = [
     svg: '<path d="M2 6.5h11V17H2z"/><path d="M13 10h4.5l3.5 3.5V17H13"/><circle cx="6.5" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
   },
   {
-    title: "Hasta 10 cuotas",
-    text: "Sin interés con Tarjeta Mutual Coyspu",
+    title: "Hasta 12 cuotas",
+    text: "Sin interés con tarjetas",
     svg: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
   },
   {
@@ -30,29 +47,34 @@ const perks = [
 ];
 ---
 
-<section
-  class="hero"
-  aria-labelledby="hero-title"
-  style={image ? `--hero-image: url('${image}')` : undefined}
->
+<section class="hero" aria-labelledby="hero-title">
   <span class="hero__blob hero__blob--a" aria-hidden="true"></span>
   <span class="hero__blob hero__blob--b" aria-hidden="true"></span>
 
-  <div class="container">
-    <div class="hero__content">
-      <span class="eyebrow">Mutual Coyspu Hogar</span>
-      <h1 id="hero-title">Todo lo que tu hogar <em>necesita</em>, en un solo lugar.</h1>
-      <p>
-        Electrodomésticos, muebles y artículos para cada ambiente, con financiación pensada para los
-        socios y la comunidad.
-      </p>
-      <div class="hero__actions">
-        <a href="#catalogo" class="btn btn--leaf">
-          Ver catálogo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-        <a href="/ofertas" class="btn btn--ghost">Ofertas del mes</a>
+  <div class="container hero__grid">
+    <div class="hero__pane" style={photo ? `--pane-image: url('${photo}')` : undefined}>
+      <div class="hero__content">
+        <div>
+          <span class="eyebrow">Catálogo 2026</span>
+          <h1 id="hero-title">Todo lo que tu hogar <em>necesita</em>, en un solo lugar.</h1>
+          <p>
+            Electrodomésticos, muebles y artículos para cada ambiente, con financiación pensada para los
+            socios y la comunidad.
+          </p>
+        </div>
+        <div class="hero__actions">
+          <a href="#catalogo" class="btn btn--leaf">
+            Ver catálogo
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a href="/ofertas" class="btn btn--ghost">Ofertas del mes</a>
+        </div>
       </div>
+    </div>
+
+    <div class="hero__side">
+      <CardCta card={card} />
+      <PromoCard promo={promo} />
     </div>
   </div>
 </section>
