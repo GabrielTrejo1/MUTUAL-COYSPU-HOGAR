@@ -1,10 +1,14 @@
 ---
 /* Grilla "Nuestras categorías": cada tarjeta enlaza a /categorias/[slug] */
+import "../styles/category-images.css";
 import { categoryMeta } from "../lib/sanity";
+import { hotspotPos, imgUrl } from "../lib/hero";
 
-/* categories: [{ slug, title, count, parentSlug? }] (ver CATEGORY_FIELDS en lib/sanity.js) */
+/* categories: [{ slug, title, count, parentSlug?, image?, imageHotspot? }] (ver CATEGORY_FIELDS en lib/sanity.js).
+   Imagen de cada tarjeta: la miniatura (`thumb`, se muestra entera, pensada para PNG de producto) si existe;
+   si no, la portada (`image`, recortada a 4:3); si no hay ninguna, el ícono. */
 interface Props {
-  categories: { slug: string; title: string; count?: number; parentSlug?: string | null }[];
+  categories: { slug: string; title: string; count?: number; parentSlug?: string | null; image?: string | null; imageHotspot?: any; thumb?: string | null }[];
   title?: string;
   eyebrow?: string;
 }
@@ -28,10 +32,22 @@ const {
 
       <div class="category-grid">
         {categories.map((c) => (
-          <a href={`/categorias/${c.slug}`} class="category-card">
-            <span class="category-card__icon">
-              <svg class="icon" aria-hidden="true"><use href={`#${categoryMeta(c.parentSlug ?? c.slug).icon}`} /></svg>
-            </span>
+          <a href={`/categorias/${c.slug}`} class:list={["category-card", (c.thumb || c.image) && "category-card--image", c.thumb && "category-card--cutout"]}>
+            {c.thumb || c.image ? (
+              <span class="category-card__photo">
+                <img
+                  src={imgUrl(c.thumb ?? c.image, 480)}
+                  alt=""
+                  style={c.thumb ? undefined : `object-position:${hotspotPos(c.imageHotspot)}`}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
+            ) : (
+              <span class="category-card__icon">
+                <svg class="icon" aria-hidden="true"><use href={`#${categoryMeta(c.parentSlug ?? c.slug).icon}`} /></svg>
+              </span>
+            )}
             <h3>{c.title}</h3>
             {(c.count ?? 0) > 0 && <span class="count">{c.count} {c.count === 1 ? "producto" : "productos"}</span>}
           </a>

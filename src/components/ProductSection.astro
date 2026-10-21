@@ -3,8 +3,10 @@
    - Normal: encabezado (eyebrow + título + enlace opcional) y grilla.
    - Destacados: si se pasa `banner`, se muestra el banner arriba de la grilla.
    Si no hay productos (y no se pasó `emptyMessage`) la sección no se dibuja. */
-   import ProductCard from "./ProductCard.astro";
+   import "../styles/category-images.css";
+import ProductCard from "./ProductCard.astro";
 import ProductCatalog from "./ProductCatalog.astro";
+import { hotspotPos, imgUrl } from "../lib/hero";
 
 export interface Banner {
   title: string;
@@ -16,8 +18,12 @@ export interface Banner {
   flip?: boolean;
   ctaLabel: string;
   ctaHref: string;
-  /** imagen de fondo opcional */
+  /** imagen de fondo opcional (portada de la categoría); si está, reemplaza el color y el arte */
   image?: string;
+  /** punto focal de la imagen (hotspot de Sanity) */
+  imageHotspot?: { x: number; y: number } | null;
+  /** imagen pequeña (miniatura de la categoría, ideal PNG): si no hay `image`, reemplaza al ícono decorativo */
+  art?: string;
 }
 
 interface Props {
@@ -53,7 +59,7 @@ const slugify = (s: string) =>
 
 const headingId = `${id ?? slugify(banner?.title ?? title) ?? "seccion"}-title`;
 const visible = products.length > 0 || Boolean(emptyMessage);
-const ctaClass = banner?.theme === "brown" ? "btn btn--leaf" : "btn btn--dark";
+const ctaClass = banner?.theme === "brown" || banner?.image ? "btn btn--leaf" : "btn btn--dark";
 ---
 
 {visible && (
@@ -65,8 +71,8 @@ const ctaClass = banner?.theme === "brown" ? "btn btn--leaf" : "btn btn--dark";
     <div class="container">
       {banner ? (
         <div
-          class:list={["banner", `banner--${banner.theme}`, banner.flip && "banner--flip"]}
-          style={banner.image ? `--banner-image: url('${banner.image}')` : undefined}
+          class:list={["banner", `banner--${banner.theme}`, banner.flip && "banner--flip", banner.image && "banner--photo"]}
+          style={banner.image ? `--banner-image: url('${imgUrl(banner.image, 1400)}'); --banner-pos: ${hotspotPos(banner.imageHotspot)}` : undefined}
         >
           <div>
             <span class="banner__kicker">Destacados</span>
@@ -77,9 +83,15 @@ const ctaClass = banner?.theme === "brown" ? "btn btn--leaf" : "btn btn--dark";
               <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
             </a>
           </div>
-          <div class="banner__art" aria-hidden="true">
-            <svg class="icon"><use href={`#${banner.icon}`} /></svg>
-          </div>
+          {banner.art && !banner.image ? (
+            <div class="banner__art banner__art--image" aria-hidden="true">
+              <img src={imgUrl(banner.art, 600)} alt="" loading="lazy" decoding="async" />
+            </div>
+          ) : (
+            <div class="banner__art" aria-hidden="true">
+              <svg class="icon"><use href={`#${banner.icon}`} /></svg>
+            </div>
+          )}
         </div>
       ) : (
         <div class="section-head">

@@ -1,0 +1,115 @@
+/* ==========================================================================
+   Imágenes de las categorías en Sanity:
+   - `imagenPortada` (grande): banners de "Destacados" y cabecera de la categoría (de fondo).
+   - `imagenMiniatura` (pequeña, ideal PNG sin fondo): tarjetas de "Nuestras categorías";
+     si es la única imagen, también reemplaza al ícono en banners y cabecera.
+   Sin imágenes, todo se ve como antes (íconos y colores).
+   Se importa desde CategoryGrid, ProductSection y categorias/[slug].astro.
+   ========================================================================== */
+
+/* ----- Tarjeta de categoría con foto ----- */
+.category-card--image { padding: 0.55rem 0.55rem 1.3rem; }
+.category-card__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 26px 8px 26px 8px;
+  background: var(--c-sand);
+}
+.category-card__photo img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .4s ease;
+}
+.category-card--image:hover .category-card__photo img { transform: scale(1.05); }
+.category-card--image h3 { padding-inline: 0.5rem; }
+
+/* Miniatura (PNG recortado): se ve entera sobre un fondo suave, sin recortar */
+.category-card--cutout .category-card__photo {
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--c-sand) 70%, #fff);
+}
+.category-card--cutout .category-card__photo img {
+  object-fit: contain;
+  padding: 0.6rem;
+}
+
+/* ----- Banner de "Destacados" con foto: velo oscuro a la izquierda y texto claro ----- */
+.banner.banner--photo {
+  --banner-fg: var(--c-on-dark);
+  grid-template-columns: 1fr;
+  background-image:
+    linear-gradient(90deg, rgba(40, 35, 31, 0.8) 0%, rgba(40, 35, 31, 0.45) 55%, rgba(40, 35, 31, 0.1) 100%),
+    var(--banner-image);
+  background-size: cover;
+  background-position: center, var(--banner-pos, center);
+}
+.banner.banner--photo .banner__art { display: none; }   /* el arte con ícono sobra: ya hay foto */
+
+/* ----- Banner con miniatura en lugar del ícono ----- */
+.banner__art.banner__art--image {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+}
+.banner__art--image img {
+  display: block;
+  width: 86%; height: 86%;
+  object-fit: contain;
+}
+@media (max-width: 900px) {
+  .banner__art.banner__art--image { width: 170px; right: -14px; bottom: -14px; opacity: 0.5; }
+}
+
+/* ----- Cabecera de la página de categoría ----- */
+.cover { padding-top: var(--space-4); }
+.cover__box {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  min-height: clamp(180px, 26vw, 300px);
+  padding: clamp(1.4rem, 3.5vw, 2.6rem);
+  border-radius: 52px 12px 52px 12px;
+  color: var(--c-on-dark);
+  background-color: var(--c-brand);
+  background-image:
+    linear-gradient(0deg, rgba(40, 35, 31, 0.78) 0%, rgba(40, 35, 31, 0.3) 55%, rgba(40, 35, 31, 0.05) 100%),
+    var(--cover-image);
+  background-size: cover;
+  background-position: center, var(--cover-pos, center);
+}
+.cover__box .eyebrow { color: var(--c-leaf-soft); }
+.cover__box h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 1.2rem + 3vw, 3.2rem);
+  color: var(--c-on-dark);
+}
+/* Cabecera con miniatura: más baja, color de marca y la imagen al costado */
+.cover__box.cover__box--art {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 0;
+  background-image: none;
+  overflow: hidden;
+}
+.cover__box--art .cover__text { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.cover__art {
+  flex: none;
+  display: grid; place-items: center;
+  width: clamp(120px, 20vw, 220px);
+  aspect-ratio: 4 / 3;
+  border-radius: 62% 38% 55% 45% / 48% 58% 42% 52%;
+  background: rgba(255, 255, 255, 0.1);
+}
+.cover__art img { display: block; width: 88%; height: 88%; object-fit: contain; }
+@media (max-width: 560px) {
+  .cover__box.cover__box--art { gap: 0.8rem; }
+  .cover__art { width: 104px; }
+}
+@media (max-width: 560px) {
+  .cover__box { border-radius: 34px 10px 34px 10px; }
+}

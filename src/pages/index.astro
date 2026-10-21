@@ -59,6 +59,9 @@ const [novedades, vendidos, departments, brands, featuredGroups] = await Promise
           flip: i % 2 === 1,
           ctaLabel: `Ver ${group.title.toLowerCase()}`,
           ctaHref: `/categorias/${group.slug}`,
+          image: group.image ?? undefined,          // portada de la categoría, si tiene
+          imageHotspot: group.imageHotspot,
+          art: group.thumb ?? undefined,            // miniatura (PNG): reemplaza al ícono si no hay portada
         }}
       />
     ))}

@@ -2,9 +2,11 @@
 /* Página de categoría (departamento o subcategoría). Con salida estática (por
    defecto en Astro) se genera una página por categoría de Sanity en el build;
    para ver cambios del CMS hay que volver a compilar (ej. con un webhook). */
-import Layout from "../../layouts/Layout.astro";
+   import Layout from "../../layouts/Layout.astro";
 import ProductSection from "../../components/ProductSection.astro";
 import CategoryGrid from "../../components/CategoryGrid.astro";
+import "../../styles/category-images.css";
+import { hotspotPos, imgUrl } from "../../lib/hero";
 import { getAllCategories, getProductsByCategory, getSubcategories } from "../../lib/sanity";
 
 export async function getStaticPaths() {
@@ -24,6 +26,7 @@ const [products, subcategories] = await Promise.all([
 ]);
 
 const hasChildren = subcategories.length > 0;
+const hasCover = Boolean(category.image || category.thumb);   // con cabecera, el título de la página va ahí
 const back = category.parent
   ? { href: `/categorias/${category.parent.slug}`, label: `Volver a ${category.parent.title}` }
   : { href: "/", label: "Volver al inicio" };
@@ -33,13 +36,43 @@ const back = category.parent
   title={`${category.title} — Mutual Coyspu Hogar`}
   description={`Catálogo de ${category.title.toLowerCase()} de Mutual Coyspu Hogar.`}
 >
+  {category.image ? (
+    <section class="cover" aria-labelledby="cover-title">
+      <div class="container">
+        <div
+          class="cover__box"
+          style={`--cover-image: url('${imgUrl(category.image, 1600)}'); --cover-pos: ${hotspotPos(category.imageHotspot)}`}
+        >
+          <div class="cover__text">
+            <span class="eyebrow">{category.parent ? category.parent.title : "Categoría"}</span>
+            <h1 id="cover-title">{category.title}</h1>
+          </div>
+        </div>
+      </div>
+    </section>
+  ) : category.thumb ? (
+    <section class="cover" aria-labelledby="cover-title">
+      <div class="container">
+        <div class="cover__box cover__box--art">
+          <div class="cover__text">
+            <span class="eyebrow">{category.parent ? category.parent.title : "Categoría"}</span>
+            <h1 id="cover-title">{category.title}</h1>
+          </div>
+          <div class="cover__art" aria-hidden="true">
+            <img src={imgUrl(category.thumb, 600)} alt="" decoding="async" />
+          </div>
+        </div>
+      </div>
+    </section>
+  ) : null}
+
   {hasChildren && (
     <CategoryGrid categories={subcategories} eyebrow="Subcategorías" title={category.title} />
   )}
 
   <ProductSection
-    eyebrow={hasChildren ? "Todos los productos" : "Categoría"}
-    title={hasChildren ? `Todo en ${category.title}` : category.title}
+    eyebrow={hasCover ? category.title : hasChildren ? "Todos los productos" : "Categoría"}
+    title={hasCover ? (hasChildren ? "Todos los productos" : "Productos") : hasChildren ? `Todo en ${category.title}` : category.title}
     products={products}
     filterable
     emptyMessage="Todavía no hay productos en esta categoría."

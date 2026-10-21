@@ -85,6 +85,9 @@
    const CATEGORY_FIELDS = /* groq */ `
      "slug": slug.current,
      "title": nombre,
+     "image": imagenPortada.asset->url,
+     "imageHotspot": imagenPortada.hotspot,
+     "thumb": imagenMiniatura.asset->url,
      "parentSlug": categoriaPadre->slug.current,
      "count": count(*[_type == "product" && ${IN_PARENT_CATEGORY}])
    `;
@@ -135,6 +138,9 @@
        `*[_type == "category" && !defined(categoriaPadre)] | order(nombre asc){
           "slug": slug.current,
           "title": nombre,
+          "image": imagenPortada.asset->url,
+          "imageHotspot": imagenPortada.hotspot,
+          "thumb": imagenMiniatura.asset->url,
           "products": *[_type == "product" && ${IN_PARENT_CATEGORY}]
                        | order(coalesce(destacado, false) desc, _updatedAt desc)[0...$limit]{ ${PRODUCT_FIELDS} }
         }[count(products) > 0]`,
@@ -235,12 +241,15 @@
      );
    }
    
-   /** Todas las categorías (para generar una página por cada una). */
+   /** Todas las categorías (para generar una página por cada una). Incluye las imágenes de la categoría (portada grande y miniatura), si tiene. */
    export function getAllCategories() {
      return sanity.fetch(
        `*[_type == "category" && defined(slug.current)] | order(nombre asc){
           "slug": slug.current,
           "title": nombre,
+          "image": imagenPortada.asset->url,
+          "imageHotspot": imagenPortada.hotspot,
+          "thumb": imagenMiniatura.asset->url,
           "parent": categoriaPadre->{ "slug": slug.current, "title": nombre }
         }`
      );
