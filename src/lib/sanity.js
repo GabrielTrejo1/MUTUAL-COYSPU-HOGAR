@@ -248,8 +248,10 @@
    
    /* ---------- Marcas ---------- */
    
+   /** Marcas del carrusel del inicio: solo las marcadas como "Destacada" (campo `destacada` de brand).
+       Si ninguna está marcada, devuelve [] y la sección no se muestra. */
    export function getBrands() {
      return sanity.fetch(
-       `*[_type == "brand" && defined(nombre)] | order(nombre asc){ "name": nombre, "logo": logo.asset->url }`
+       `*[_type == "brand" && defined(nombre) && destacada == true] | order(nombre asc){ "name": nombre, "logo": logo.asset->url }`
      );
    }
