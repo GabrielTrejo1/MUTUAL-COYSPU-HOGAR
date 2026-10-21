@@ -1,72 +1,116 @@
 ---
-/* Bloque 3 del hero: promoción destacada. Datos de Sanity (getHeroPromotion).
-   Dos modos: "contenido" (etiqueta, título, texto, botón, color o imagen de fondo) o "banner"
-   (una sola imagen clicable). Sin promoción activa se muestra un acceso a /ofertas.
-   Si la promoción tiene fecha "hasta", un script mínimo la reemplaza por ese acceso cuando vence,
-   aunque la página no se haya vuelto a compilar. */
-import { categoryMeta } from "../lib/sanity";
+/* Bloque 3 del hero: carrusel de promociones. Datos de Sanity (getHeroPromotions, hasta 5).
+   - Cada promoción tiene dos modos: "contenido" (etiqueta, título, texto, botón, color o imagen de
+     fondo) o "banner" (una sola imagen clicable). Todas comparten el mismo marco 4:5.
+   - Con una sola promoción no hay controles ni movimiento.
+   - Pasa sola cada 6 segundos; se pausa con el mouse encima, con el foco adentro, con el botón de
+     pausa o si la pestaña no está visible, y no avanza sola si el usuario prefiere menos movimiento.
+   - Cada promoción con fecha "hasta" se oculta sola al vencer (sin recompilar). Si no queda ninguna
+     (o nunca hubo), se muestra un acceso a /ofertas. */
+     import { categoryMeta } from "../lib/sanity";
 import { hotspotPos, imgUrl, isExternal } from "../lib/hero";
 
-const { promo } = Astro.props;
-
-const mode = promo?.mode === "banner" && promo?.banner ? "banner" : "contenido";
-const href =
-  promo?.href || (promo?.category?.slug ? `/categorias/${promo.category.slug}` : "/ofertas");
-const external = isExternal(href);
-const rel = external ? "noopener noreferrer" : undefined;
-const target = external ? "_blank" : undefined;
+const { promos = [], interval = 6000 } = Astro.props;
 
 const THEMES = ["leaf", "brown", "sand", "teal"];
-const theme = THEMES.includes(promo?.theme) ? promo.theme : "leaf";
-const hasImage = Boolean(promo?.image);
-const icon = promo?.category ? categoryMeta(promo.category.parentSlug ?? promo.category.slug).icon : null;
-const bg = hasImage
-  ? `--promo-image:url('${imgUrl(promo.image, 900)}');--promo-pos:${hotspotPos(promo.imageHotspot)}`
-  : undefined;
+
+// Datos ya resueltos de cada promoción
+const slides = promos.map((promo, i) => {
+  const mode = promo.mode === "banner" && promo.banner ? "banner" : "contenido";
+  const href = promo.href || (promo.category?.slug ? `/categorias/${promo.category.slug}` : "/ofertas");
+  const external = isExternal(href);
+  const theme = THEMES.includes(promo.theme) ? promo.theme : "leaf";
+  const hasImage = Boolean(promo.image);
+  return {
+    promo,
+    i,
+    mode,
+    href,
+    rel: external ? "noopener noreferrer" : undefined,
+    target: external ? "_blank" : undefined,
+    theme,
+    hasImage,
+    icon: promo.category ? categoryMeta(promo.category.parentSlug ?? promo.category.slug).icon : null,
+    bg: hasImage
+      ? `--promo-image:url('${imgUrl(promo.image, 900)}');--promo-pos:${hotspotPos(promo.imageHotspot)}`
+      : undefined,
+  };
+});
+const total = slides.length;
 ---
 
-<div class="hero__slot" data-promo-slot>
-  {promo && (
-    mode === "banner" ? (
-      <a class="hero-card hero-card--banner" href={href} target={target} rel={rel} data-promo data-until={promo.until ?? undefined}>
-        <picture>
-          {promo.bannerMobile && <source media="(max-width: 560px)" srcset={imgUrl(promo.bannerMobile, 800)} />}
-          <img
-            src={imgUrl(promo.banner, 1000)}
-            alt={promo.alt ?? ""}
-            style={`object-position:${hotspotPos(promo.bannerHotspot)}`}
-            loading="eager"
-            decoding="async"
-          />
-        </picture>
-      </a>
-    ) : (
-      <article
-        class:list={["hero-card", "hero-card--promo", `hero-card--${theme}`, hasImage && "has-image"]}
-        style={bg}
-        data-promo
-        data-until={promo.until ?? undefined}
-        aria-labelledby="promo-title"
-      >
-        <div class="hero-card__body">
-          {promo.label && <span class="hero-card__chip">{promo.label}</span>}
-          <h2 class="hero-card__title" id="promo-title">{promo.title}</h2>
-          {promo.text && <p class="hero-card__text">{promo.text}</p>}
-          <a class:list={["btn", theme === "brown" || hasImage ? "btn--leaf" : "btn--dark"]} href={href} target={target} rel={rel}>
-            {promo.buttonText}
-            <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
-          </a>
+<div
+  class="promo"
+  data-promo-carousel
+  data-interval={interval}
+  role="region"
+  aria-roledescription="carrusel"
+  aria-label="Promociones"
+>
+  {total > 0 && (
+    <div class="promo__track" data-track>
+      {slides.map((s) => (
+        <div
+          class:list={["promo__slide", s.i === 0 && "is-active"]}
+          data-slide
+          data-until={s.promo.until ?? undefined}
+          role="group"
+          aria-roledescription="promoción"
+          aria-label={`${s.i + 1} de ${total}`}
+          aria-hidden={s.i === 0 ? undefined : "true"}
+          inert={s.i === 0 ? undefined : true}
+        >
+          {s.mode === "banner" ? (
+            <a class="hero-card hero-card--banner" href={s.href} target={s.target} rel={s.rel}>
+              <picture>
+                {s.promo.bannerMobile && <source media="(max-width: 560px)" srcset={imgUrl(s.promo.bannerMobile, 800)} />}
+                <img
+                  src={imgUrl(s.promo.banner, 1000)}
+                  alt={s.promo.alt ?? ""}
+                  style={`object-position:${hotspotPos(s.promo.bannerHotspot)}`}
+                  loading={s.i === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </picture>
+            </a>
+          ) : (
+            <article
+              class:list={["hero-card", "hero-card--promo", `hero-card--${s.theme}`, s.hasImage && "has-image"]}
+              style={s.bg}
+              aria-labelledby={`promo-title-${s.i}`}
+            >
+              <div class="hero-card__body">
+                {s.promo.label && <span class="hero-card__chip">{s.promo.label}</span>}
+                <h2 class="hero-card__title" id={`promo-title-${s.i}`}>{s.promo.title}</h2>
+                {s.promo.text && <p class="hero-card__text">{s.promo.text}</p>}
+                <a
+                  class:list={["btn", s.theme === "brown" || s.hasImage ? "btn--leaf" : "btn--dark"]}
+                  href={s.href}
+                  target={s.target}
+                  rel={s.rel}
+                >
+                  {s.promo.buttonText}
+                  <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+                </a>
+              </div>
+              {s.icon && !s.hasImage && (
+                <div class="hero-card__art" aria-hidden="true">
+                  <svg class="icon"><use href={`#${s.icon}`} /></svg>
+                </div>
+              )}
+            </article>
+          )}
         </div>
-        {icon && !hasImage && (
-          <div class="hero-card__art" aria-hidden="true">
-            <svg class="icon"><use href={`#${icon}`} /></svg>
-          </div>
-        )}
-      </article>
-    )
+      ))}
+    </div>
   )}
 
-  <article class="hero-card hero-card--promo hero-card--leaf" data-promo-fallback hidden={promo ? true : undefined} aria-labelledby="promo-fallback-title">
+  <article
+    class="hero-card hero-card--promo hero-card--leaf"
+    data-promo-fallback
+    hidden={total > 0 ? true : undefined}
+    aria-labelledby="promo-fallback-title"
+  >
     <div class="hero-card__body">
       <span class="hero-card__chip">Ofertas</span>
       <h2 class="hero-card__title" id="promo-fallback-title">Mirá las ofertas vigentes</h2>
@@ -77,16 +121,128 @@ const bg = hasImage
       </a>
     </div>
   </article>
+
+  <!-- Los puntos se arman en el navegador (según las promociones que sigan vigentes) -->
+  <div class="promo__controls" data-controls hidden>
+    <button type="button" class="promo__pause" data-pause aria-label="Pausar el cambio automático" aria-pressed="false">
+      <svg class="icon icon--pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14" /></svg>
+      <svg class="icon icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>
+    </button>
+    <div class="promo__dots" data-dots></div>
+  </div>
 </div>
 
 <script>
-  // Promoción vencida (sin recompilar el sitio) → se muestra el acceso a /ofertas
-  document.querySelectorAll<HTMLElement>("[data-promo-slot]").forEach((slot) => {
-    const promo = slot.querySelector<HTMLElement>("[data-promo]");
-    const until = promo?.dataset.until ? Date.parse(promo.dataset.until) : NaN;
-    if (promo && Number.isFinite(until) && until < Date.now()) {
-      promo.hidden = true;
-      slot.querySelector<HTMLElement>("[data-promo-fallback]")?.removeAttribute("hidden");
+  // @ts-nocheck
+  document.querySelectorAll("[data-promo-carousel]").forEach((root) => {
+    const track = root.querySelector("[data-track]");
+    const controls = root.querySelector("[data-controls]");
+    const dotsBox = root.querySelector("[data-dots]");
+    const pauseBtn = root.querySelector("[data-pause]");
+    const fallback = root.querySelector("[data-promo-fallback]");
+    const interval = Number(root.dataset.interval) || 6000;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    // 1) Promociones vencidas (sin recompilar el sitio): se descartan
+    let slides = [...root.querySelectorAll("[data-slide]")];
+    const now = Date.now();
+    for (const s of slides) {
+      const until = s.dataset.until ? Date.parse(s.dataset.until) : NaN;
+      if (Number.isFinite(until) && until < now) s.remove();
     }
+    slides = slides.filter((s) => s.isConnected);
+
+    // 2) Ninguna vigente → acceso a /ofertas
+    if (slides.length === 0) {
+      track?.remove();
+      controls.hidden = true;
+      fallback?.removeAttribute("hidden");
+      return;
+    }
+
+    let current = 0;
+    let timer = null;
+    let userPaused = false;
+    let hovering = false;
+    let focusInside = false;
+
+    const show = (index, { focus = false } = {}) => {
+      current = (index + slides.length) % slides.length;
+      slides.forEach((s, i) => {
+        const on = i === current;
+        s.classList.toggle("is-active", on);
+        s.toggleAttribute("inert", !on);
+        if (on) s.removeAttribute("aria-hidden");
+        else s.setAttribute("aria-hidden", "true");
+        s.setAttribute("aria-label", `${i + 1} de ${slides.length}`);
+      });
+      dots.forEach((d, i) => {
+        d.setAttribute("aria-current", i === current ? "true" : "false");
+        d.classList.toggle("is-active", i === current);
+      });
+      if (focus) dots[current]?.focus();
+    };
+
+    const playing = () => !userPaused && !hovering && !focusInside && !document.hidden && !reduced.matches;
+    const stop = () => { clearInterval(timer); timer = null; };
+    const sync = () => {
+      stop();
+      // Mientras no avanza sola, los lectores de pantalla anuncian el cambio de promoción
+      track?.setAttribute("aria-live", playing() ? "off" : "polite");
+      if (slides.length > 1 && playing()) timer = setInterval(() => show(current + 1), interval);
+    };
+
+    // 3) Una sola promoción: sin controles ni movimiento
+    const dots = [];
+    if (slides.length > 1) {
+      slides.forEach((_, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "promo__dot";
+        b.setAttribute("aria-label", `Ir a la promoción ${i + 1} de ${slides.length}`);
+        b.addEventListener("click", () => { show(i); sync(); });
+        dotsBox.append(b);
+        dots.push(b);
+      });
+      controls.hidden = false;
+
+      pauseBtn.addEventListener("click", () => {
+        userPaused = !userPaused;
+        pauseBtn.setAttribute("aria-pressed", String(userPaused));
+        pauseBtn.setAttribute("aria-label", userPaused ? "Reanudar el cambio automático" : "Pausar el cambio automático");
+        sync();
+      });
+
+      // Solo con mouse: en pantallas táctiles un toque dejaría el carrusel pausado
+      root.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hovering = true; sync(); } });
+      root.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") { hovering = false; sync(); } });
+      // Solo el foco de teclado pausa: tras un clic con el mouse el botón queda enfocado, pero el carrusel debe seguir
+      root.addEventListener("focusin", (e) => { focusInside = e.target.matches(":focus-visible"); sync(); });
+      root.addEventListener("focusout", (e) => {
+        if (!root.contains(e.relatedTarget)) { focusInside = false; sync(); }
+      });
+      document.addEventListener("visibilitychange", sync);
+      reduced.addEventListener("change", sync);
+
+      // Flechas del teclado (con el foco en los puntos o en el botón de pausa)
+      root.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") { e.preventDefault(); show(current + 1, { focus: true }); sync(); }
+        else if (e.key === "ArrowLeft") { e.preventDefault(); show(current - 1, { focus: true }); sync(); }
+      });
+
+      // Deslizar con el dedo
+      let startX = null, startY = null;
+      track.addEventListener("touchstart", (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, { passive: true });
+      track.addEventListener("touchend", (e) => {
+        if (startX === null) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        startX = startY = null;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { show(current + (dx < 0 ? 1 : -1)); sync(); }
+      }, { passive: true });
+    }
+
+    show(0);   // deja activa la primera promoción que siga vigente (y las demás ocultas)
+    sync();
   });
 </script>

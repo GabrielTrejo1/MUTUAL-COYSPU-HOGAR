@@ -2,15 +2,15 @@
 /* Hero a todo el ancho con tres bloques "bento" encima + tira de beneficios que se solapa con su borde inferior:
      1. Presentación (texto + botones), con una foto del local de fondo (opcional)
      2. Tarjeta Coyspu (CardCta.astro, datos de Sanity)
-     3. Promoción destacada (PromoCard.astro, datos de Sanity; imagen 1080 × 1035)
+     3. Promociones (PromoCard.astro: carrusel con las promociones de Sanity; imagen 1080 × 1350)
 
    Foto del bloque de presentación: guardala como  public/img/hero-local.jpg  (o pasá otra ruta con
    la prop `image`). Si el archivo no existe, el bloque queda con un color liso. */
-import { existsSync } from "node:fs";
+   import { existsSync } from "node:fs";
 import "../styles/hero.css";
 import CardCta from "./CardCta.astro";
 import PromoCard from "./PromoCard.astro";
-import { getCardOffer, getHeroPromotion } from "../lib/sanity";
+import { getCardOffer, getHeroPromotions } from "../lib/sanity";
 
 interface Props {
   /** Ruta pública de la foto del bloque de presentación, ej. "/img/hero-local.jpg" */
@@ -21,7 +21,7 @@ const { image = "/img/hero-local.jpg" } = Astro.props;
 // Solo se usa la foto si el archivo existe en /public (así no hay un 404 mientras no la cargues)
 const photo = existsSync(`public${image}`) ? image : undefined;
 
-const [card, promo] = await Promise.all([getCardOffer(), getHeroPromotion()]);
+const [card, promos] = await Promise.all([getCardOffer(), getHeroPromotions()]);
 
 const perks = [
   {
@@ -74,7 +74,7 @@ const perks = [
 
     <div class="hero__side">
       <CardCta card={card} />
-      <PromoCard promo={promo} />
+      <PromoCard promos={promos} />
     </div>
   </div>
 </section>

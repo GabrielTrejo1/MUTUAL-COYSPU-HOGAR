@@ -63,7 +63,61 @@
   
   /* ----- Columna derecha: tarjeta (baja) + promoción (cuadrada) ----- */
   .hero__side { display: grid; grid-template-rows: auto auto; align-content: space-between; gap: var(--space-2); min-width: 0; }
-  .hero__slot { display: grid; min-width: 0; }
+  /* Carrusel de promociones: todas las promos apiladas en la misma celda (mismo marco 4:5), se ve la activa */
+  .promo { position: relative; min-width: 0; }
+  .promo__track { display: grid; touch-action: pan-y; }
+  .promo__slide {
+    grid-area: 1 / 1;
+    display: grid;
+    min-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .5s ease, visibility 0s linear .5s;
+  }
+  .promo__slide.is-active { opacity: 1; visibility: visible; transition: opacity .5s ease, visibility 0s; }
+  
+  /* Controles: puntos + pausa, sobre la esquina inferior derecha de la promoción */
+  .promo__controls {
+    position: absolute;
+    z-index: 3;
+    right: 0.7rem; bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+    border-radius: var(--radius-pill);
+    background: rgba(30, 26, 22, 0.6);
+    backdrop-filter: blur(4px);
+  }
+  .promo__controls[hidden] { display: none; }
+  .promo__dots { display: flex; align-items: center; gap: 0.4rem; }
+  .promo__dot {
+    position: relative;
+    width: 8px; height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: width .25s ease, background-color .25s ease;
+  }
+  .promo__dot::before { content: ""; position: absolute; inset: -10px -4px; }   /* zona de toque más grande */
+  .promo__dot.is-active { width: 20px; background: #fff; }
+  .promo__pause {
+    display: grid; place-items: center;
+    width: 24px; height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+  }
+  .promo__pause:hover { background: rgba(255, 255, 255, 0.18); }
+  .promo__pause svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  .promo__pause .icon--play { display: none; fill: currentColor; stroke: none; }
+  .promo__pause[aria-pressed="true"] .icon--pause { display: none; }
+  .promo__pause[aria-pressed="true"] .icon--play { display: block; }
   
   /* ----- Tarjetas (Tarjeta Coyspu y promoción) ----- */
   .hero-card {
@@ -198,13 +252,12 @@
   .hero-card--banner:focus-visible { outline-offset: 4px; }
   /* Tarjeta Coyspu en modo banner: apaisada (2:1). Promoción en modo banner: 4:5 (1080 × 1350) */
   .hero__side > .hero-card--banner { aspect-ratio: 2 / 1; }
-  .hero__slot > .hero-card--banner { aspect-ratio: 4 / 5; }
+  .promo__slide > .hero-card--banner { aspect-ratio: 4 / 5; }
   
   /* ----- Tablet: presentación arriba; tarjeta y promoción lado a lado ----- */
   @media (max-width: 960px) {
     .hero__grid { grid-template-columns: 1fr; }
     .hero__side { grid-template-columns: minmax(0, 1fr) minmax(0, 320px); grid-template-rows: none; align-content: stretch; align-items: stretch; }
-    .hero__slot { min-height: 0; }
     .hero__side > .hero-card--banner { aspect-ratio: auto; min-height: 150px; }
     .hero-card--card { align-content: center; }
   }
@@ -219,4 +272,6 @@
     .hero__side > .hero-card--banner { aspect-ratio: 2 / 1; }
   }
   
-  @media (prefers-reduced-motion: reduce) { .hero-card--banner img { transition: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-card--banner img, .promo__slide, .promo__slide.is-active, .promo__dot { transition: none; }
+  }

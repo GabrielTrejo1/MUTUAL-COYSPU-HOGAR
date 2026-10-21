@@ -156,15 +156,17 @@
      "href": enlace
    `;
    
-   /** Promoción destacada del hero: la primera activa y vigente según `orden`.
-       Devuelve null si no hay ninguna (el hero muestra entonces un bloque por defecto).
-       La vigencia (desde/hasta) se evalúa al compilar el sitio. */
-   export function getHeroPromotion() {
+   /** Promociones del hero: las activas y vigentes, según `orden` (hasta `limit`, 5 por defecto).
+       Devuelve [] si no hay ninguna (el hero muestra entonces un acceso a /ofertas).
+       La vigencia (desde/hasta) se evalúa al compilar el sitio; además, el navegador oculta
+       sola cada promoción cuando pasa su fecha "hasta". */
+   export function getHeroPromotions(limit = 5) {
      return sanity.fetch(
        `*[_type == "promocion" && activa != false
            && (!defined(desde) || desde <= now())
            && (!defined(hasta) || hasta >= now())]
-         | order(coalesce(orden, 9999) asc, _updatedAt desc)[0]{
+         | order(coalesce(orden, 9999) asc, _updatedAt desc)[0...$limit]{
+           "id": _id,
            ${HERO_MEDIA},
            "label": etiqueta,
            "title": titulo,
@@ -173,7 +175,8 @@
            "theme": coalesce(tema, "leaf"),
            "until": hasta,
            "category": categoria->{ "slug": slug.current, "parentSlug": categoriaPadre->slug.current }
-         }`
+         }`,
+       { limit }
      );
    }
    
