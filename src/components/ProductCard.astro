@@ -1,91 +1,27 @@
 ---
-/* Tarjeta de producto. Toda la tarjeta es clicable: el botón del título lleva
-   los datos del producto en `data-product` y ProductModal.astro los lee. */
-   import { categoryMeta } from "../lib/sanity";
+/* Tarjeta de producto. Toda la tarjeta es clicable: el enlace del título lleva a la
+   página del producto (/productos/[slug]) y se "estira" sobre toda la tarjeta. */
+   import { buildProductView } from "../lib/products";
 
-/* `product` es lo que devuelve PRODUCT_FIELDS en lib/sanity.js:
-   { name, code, brand, badge, oldPrice, price, installments, description,
-     features, attributes, warranty, colors, image, category } */
+/* `product` es lo que devuelve PRODUCT_FIELDS en lib/sanity.js */
 const { product, filter } = Astro.props;   // `filter` (opcional): datos para los filtros de la categoría
-const {
-  name, code, brand, badge, oldPrice, price, installments, description, image, category, warranty,
-} = product;
-
-// Colores: se descartan referencias rotas y se valida el código hexadecimal
-const safeHex = (h) => {
-  const v = String(h ?? "").trim().replace(/^#?/, "#");
-  return /^#[0-9a-f]{3,8}$/i.test(v) ? v : "#cccccc";
-};
-const colors = (product.colors ?? [])
-  .filter((c) => c && c.name)
-  .map((c) => ({ name: c.name, hex: safeHex(c.hex) }));
-
-// Lista del modal: características + atributos (excepto "Color", que ya van como círculos) + garantía
-const specs = [
-  ...(product.features ?? []),
-  ...(product.attributes ?? [])
-    .filter((a) => a && a.key && a.value && a.key.trim().toLowerCase() !== "color")
-    .map((a) => `${a.key}: ${a.value}`),
-  ...(warranty ? [`Garantía: ${warranty} ${warranty === 1 ? "mes" : "meses"}`] : []),
-];
-
-const money = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
-const fmt = (n) => money.format(n).replace(/ /g, " ");
-
-// El icono y el tono vienen del departamento (el padre, si es una subcategoría)
-const meta = categoryMeta(category?.parentSlug ?? category?.slug);
-const hasDiscount = typeof oldPrice === "number" && oldPrice > price;
-const off = hasDiscount ? Math.round((1 - price / oldPrice) * 100) : 0;
-const hasInstallments = installments > 1;
-const perInstallment = hasInstallments ? fmt(Math.round(price / installments)) : "";
-// Todas las imágenes del producto (si no vino la lista, se usa solo la primera).
-// fit=max: Sanity solo reduce la imagen para que quepa, sin recortarla.
-const urls = (product.images?.length ? product.images : image ? [image] : []).filter(Boolean);
-const imageSrc = urls[0] ? `${urls[0]}?w=800&h=800&fit=max&auto=format` : undefined;
-const images = urls.map((u) => ({
-  src: `${u}?w=1000&h=1000&fit=max&auto=format`,   // imagen grande del modal
-  thumb: `${u}?w=160&h=160&fit=max&auto=format`,   // miniatura
-}));
-
-const badges = [];
-if (badge) badges.push({ label: badge });
-if (hasDiscount && off > 0) badges.push({ label: `-${off}%`, off: true });
-
-// Datos que consume el modal (ya formateados)
-const payload = {
-  name,
-  code: code ?? "",
-  brand: brand ?? "",
-  category: category?.title ?? "",
-  tone: meta.tone,
-  icon: meta.icon,
-  images,
-  badges,
-  oldPrice: hasDiscount ? fmt(oldPrice) : "",
-  price: fmt(price),
-  installments: hasInstallments ? installments : 0,
-  perInstallment,
-  colors,
-  description: description ?? "",
-  specs,
-};
+const v = buildProductView(product);
+const { name, category, colors, badges, oldPrice, price, installments, perInstallment, hasDiscount, outOfStock } = v;
+const imageSrc = v.images[0]?.card;
+const href = product.slug ? v.url : undefined;
 ---
 
-<article class="product-card" data-f={filter ? JSON.stringify(filter) : undefined}>
-  <div class={`product-card__media ${meta.tone}`}>
+<article class:list={["product-card", outOfStock && "product-card--out"]} data-f={filter ? JSON.stringify(filter) : undefined}>
+  <div class={`product-card__media ${v.tone}`}>
     {badges.length > 0 && (
       <div class="badges">
-        {badges.map((b) => <span class={b.off ? "badge badge--off" : "badge"}>{b.label}</span>)}
+        {badges.map((b) => <span class:list={["badge", b.off && "badge--off", b.out && "badge--out"]}>{b.label}</span>)}
       </div>
     )}
     {imageSrc ? (
       <img src={imageSrc} alt="" loading="lazy" decoding="async" />
     ) : (
-      <svg class="icon" aria-hidden="true"><use href={`#${meta.icon}`} /></svg>
+      <svg class="icon" aria-hidden="true"><use href={`#${v.icon}`} /></svg>
     )}
   </div>
 
@@ -93,9 +29,7 @@ const payload = {
     {category && <span class="product-card__cat">{category.title}</span>}
 
     <h3 class="product-card__title">
-      <button type="button" class="product-card__open" data-product={JSON.stringify(payload)}>
-        {name}
-      </button>
+      {href ? <a class="product-card__open" href={href}>{name}</a> : <span>{name}</span>}
     </h3>
 
     {colors.length > 0 && (
@@ -106,16 +40,14 @@ const payload = {
 
     <div class="price">
       {hasDiscount && (
-        <span class="price__old"><span class="sr-only">Precio anterior </span>{fmt(oldPrice)}</span>
+        <span class="price__old"><span class="sr-only">Precio anterior </span>{oldPrice}</span>
       )}
-      <span class="price__now"><span class="sr-only">{hasDiscount ? "Precio promoción " : "Precio "}</span>{fmt(price)}</span>
+      <span class="price__now"><span class="sr-only">{hasDiscount ? "Precio promoción " : "Precio "}</span>{price}</span>
     </div>
 
-    {hasInstallments && (
+    {installments > 0 && (
       <p class="installments">
-        <strong>{installments} cuotas</strong> sin interés de <strong>{perInstallment}</strong>
-        <br>
-        <span>con <strong>Tarjeta Coyspu</strong></span>
+        {installments} cuotas sin interés de <strong>{perInstallment}</strong>
       </p>
     )}
   </div>

@@ -1,0 +1,427 @@
+---
+// @ts-nocheck
+/* Página de producto: /productos/[slug]
+   Se genera una por producto en el build. Incluye galería con imagen ampliable,
+   selector de color, botón de WhatsApp (con el link del producto en el mensaje),
+   botón para compartir, datos para la vista previa (Open Graph / Google) y
+   productos relacionados. */
+import Layout from "../../layouts/Layout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import "../../styles/product-page.css";
+import { getAllProducts } from "../../lib/sanity";
+import { buildProductView, getRelated } from "../../lib/products";
+import { whatsappHref } from "../../lib/hero";
+
+export async function getStaticPaths() {
+  const all = await getAllProducts();
+  return all.map((product) => ({
+    params: { slug: product.slug },
+    props: { product, all },
+  }));
+}
+
+const { product, all } = Astro.props;
+const v = buildProductView(product);
+const related = getRelated(product, all, 4);
+const { category } = v;
+
+const waNumber = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
+// Dirección completa del producto: solo se conoce en el build si hay `site` en astro.config;
+// si no, el script de abajo completa el link con la dirección real al abrir la página.
+const absUrl = Astro.site ? new URL(v.url, Astro.site).href : v.url;
+const waMessage = (extra = "") =>
+  `Hola! Me interesa «${v.name}»${extra}${v.code ? ` (cód. ${v.code})` : ""}. ¿Está disponible?\n${absUrl}`;
+const waLink = whatsappHref(waNumber, waMessage());
+
+// Vista previa al compartir
+const metaDescription = (
+  v.description ||
+  `${v.name}${v.brand ? ` de ${v.brand}` : ""} a ${v.price}${v.installments ? ` o ${v.installments} cuotas sin interés` : ""}.`
+).replace(/\s+/g, " ").trim().slice(0, 200);
+const ogImage = v.images[0]?.src;
+
+// Datos estructurados para Google
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: v.name,
+  description: metaDescription,
+  ...(ogImage && { image: v.images.map((i) => i.src) }),
+  ...(v.code && { sku: v.code }),
+  ...(v.brand && { brand: { "@type": "Brand", name: v.brand } }),
+  offers: {
+    "@type": "Offer",
+    priceCurrency: "ARS",
+    price: v.priceNumber,
+    availability: v.outOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+    ...(Astro.site && { url: absUrl }),
+  },
+};
+
+// Migas de pan: Inicio › departamento › categoría › producto
+const crumbs = [
+  { label: "Inicio", href: "/" },
+  ...(category?.parentSlug ? [{ label: category.parentTitle ?? "Categoría", href: `/categorias/${category.parentSlug}` }] : []),
+  ...(category ? [{ label: category.title, href: `/categorias/${category.slug}` }] : []),
+];
+
+const hasImages = v.images.length > 0;
+const multi = v.images.length > 1;
+---
+
+<Layout title={`${v.name} — Mutual Coyspu Hogar`} description={metaDescription} image={ogImage} ogType="product">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+  <div class="container">
+    <nav class="crumbs" aria-label="Migas de pan">
+      <ol>
+        {crumbs.map((c) => <li><a href={c.href}>{c.label}</a></li>)}
+        <li aria-current="page">{v.name}</li>
+      </ol>
+    </nav>
+
+    <article class="pdp" data-pdp>
+      <!-- ============ Galería ============ -->
+      <div class="pdp__gallery">
+        <div class="pdp__stage">
+          <div class={`pdp__media ${v.tone}`}>
+            {v.badges.length > 0 && (
+              <div class="badges">
+                {v.badges.map((b) => <span class:list={["badge", b.off && "badge--off", b.out && "badge--out"]}>{b.label}</span>)}
+              </div>
+            )}
+            {hasImages ? (
+              <button type="button" class="pdp__zoom" data-zoom aria-label="Ampliar imagen">
+                <img src={v.images[0].src} alt={v.name} width="1000" height="1000" data-main fetchpriority="high" decoding="async" />
+                <span class="pdp__zoom-hint" aria-hidden="true"><svg class="icon"><use href="#i-expand" /></svg></span>
+              </button>
+            ) : (
+              <svg class="icon" aria-hidden="true"><use href={`#${v.icon}`} /></svg>
+            )}
+          </div>
+          {multi && (
+            <>
+              <button type="button" class="gallery-nav gallery-nav--prev" data-prev aria-label="Imagen anterior"><svg class="icon"><use href="#i-arrow" /></svg></button>
+              <button type="button" class="gallery-nav gallery-nav--next" data-next aria-label="Imagen siguiente"><svg class="icon"><use href="#i-arrow" /></svg></button>
+              <p class="gallery-count" data-count aria-live="polite">1 / {v.images.length}</p>
+            </>
+          )}
+        </div>
+        {multi && (
+          <div class="pdp__thumbs" role="group" aria-label="Imágenes del producto">
+            {v.images.map((img, i) => (
+              <button type="button" data-thumb={i} aria-label={`Ver imagen ${i + 1}`} aria-current={i === 0 ? "true" : "false"}>
+                <img src={img.thumb} alt="" loading="lazy" decoding="async" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- ============ Datos ============ -->
+      <div class="pdp__info">
+        {(v.code || v.brand) && (
+          <p class="pdp__code">{[v.brand, v.code && `Cód. ${v.code}`].filter(Boolean).join(" · ")}</p>
+        )}
+        <h1>{v.name}</h1>
+
+        <div>
+          <div class="price">
+            {v.hasDiscount && <span class="price__old"><span class="sr-only">Precio anterior </span>{v.oldPrice}</span>}
+            <span class="price__now"><span class="sr-only">{v.hasDiscount ? "Precio promoción " : "Precio "}</span>{v.price}</span>
+          </div>
+          {v.installments > 0 && (
+            <p class="installments">{v.installments} cuotas sin interés de <strong>{v.perInstallment}</strong></p>
+          )}
+        </div>
+
+        {v.outOfStock && <p class="pdp__stock">Sin stock</p>}
+
+        {v.colors.length > 0 && (
+          <fieldset class="pdp__colors">
+            <legend>Color: <span data-color-name>{v.colors.length === 1 ? v.colors[0].name : "elegí uno"}</span></legend>
+            <div class="swatch-picker">
+              {v.colors.map((c, i) => (
+                <button type="button" style={`--sw:${c.hex}`} data-color={c.name} title={c.name} aria-label={c.name} aria-pressed={v.colors.length === 1 ? "true" : "false"} />
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        {v.description && <p class="pdp__desc">{v.description}</p>}
+        {v.specs.length > 0 && <ul class="pdp__specs">{v.specs.map((s) => <li>{s}</li>)}</ul>}
+
+        <div class="pdp__cta">
+          {v.outOfStock ? (
+            <button type="button" class="btn btn--whatsapp" disabled aria-disabled="true">
+              <svg class="icon" aria-hidden="true"><use href="#i-whatsapp" /></svg>
+              Sin stock
+            </button>
+          ) : (
+            <a class="btn btn--whatsapp" href={waLink} target="_blank" rel="noopener" data-wa>
+              <svg class="icon" aria-hidden="true"><use href="#i-whatsapp" /></svg>
+              Consultar por WhatsApp
+            </a>
+          )}
+
+          <div class="share" data-share>
+            <button type="button" class="share__btn" data-share-btn aria-haspopup="true" aria-expanded="false" aria-label="Compartir producto">
+              <svg class="icon" aria-hidden="true"><use href="#i-share" /></svg>
+              <span>Compartir</span>
+            </button>
+            <div class="share__menu" data-share-menu hidden>
+              <a class="share__item" data-share-wa href="#" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-whatsapp" /></svg>WhatsApp</a>
+              <a class="share__item" data-share-fb href="#" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-facebook" /></svg>Facebook</a>
+              <button type="button" class="share__item" data-share-copy><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg>Copiar link</button>
+            </div>
+          </div>
+        </div>
+        <p class="pdp__note">Te respondemos por WhatsApp con disponibilidad, formas de pago y envío.</p>
+      </div>
+    </article>
+  </div>
+
+  {related.length > 0 && (
+    <section class="related" aria-labelledby="related-title">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow eyebrow--dark">{category?.title ?? "Más productos"}</span>
+            <h2 id="related-title">También te puede interesar</h2>
+          </div>
+        </div>
+        <div class="product-grid">
+          {related.map((p) => <ProductCard product={p} />)}
+        </div>
+        {category && (
+          <div class="related__more">
+            <a class="btn btn--dark" href={`/categorias/${category.slug}`}>
+              Ver más en {category.title}
+              <svg class="icon" aria-hidden="true" style="width:18px;height:18px"><use href="#i-arrow" /></svg>
+            </a>
+          </div>
+        )}
+      </div>
+    </section>
+  )}
+
+  <!-- ============ Imagen ampliada ============ -->
+  {hasImages && (
+    <div class="lightbox" data-lightbox role="dialog" aria-modal="true" aria-label="Imagen ampliada" hidden>
+      <div class="lightbox__bar">
+        <span class="lightbox__count" data-lb-count hidden></span>
+        <button type="button" class="lightbox__close" data-lb-close aria-label="Cerrar imagen ampliada">
+          <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <div class="lightbox__view" data-lb-view>
+        <img src="" alt={v.name} data-lb-img draggable="false" />
+        {multi && (
+          <>
+            <button type="button" class="gallery-nav gallery-nav--prev" data-lb-prev aria-label="Imagen anterior"><svg class="icon"><use href="#i-arrow" /></svg></button>
+            <button type="button" class="gallery-nav gallery-nav--next" data-lb-next aria-label="Imagen siguiente"><svg class="icon"><use href="#i-arrow" /></svg></button>
+          </>
+        )}
+      </div>
+      <p class="lightbox__hint">Tocá la imagen para acercar{multi ? " · deslizá para ver las demás" : ""}</p>
+    </div>
+  )}
+
+  <p class="toast" data-toast role="status" hidden></p>
+
+  <script
+    is:inline
+    type="application/json"
+    id="pdp-data"
+    set:html={JSON.stringify({
+      images: v.images.map((i) => ({ src: i.src, full: i.full })),
+      name: v.name,
+      code: v.code,
+      path: v.url,
+      waNumber: String(waNumber ?? "").replace(/\D/g, ""),
+    })}
+  />
+</Layout>
+
+<script>
+  // @ts-nocheck
+  const root = document.querySelector("[data-pdp]");
+  if (root) {
+    const data = JSON.parse(document.getElementById("pdp-data").textContent);
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+    const images = data.images;
+
+    // Dirección completa del producto (en local es localhost; en producción, el dominio real)
+    const pageUrl = new URL(data.path, location.origin).href;
+
+    /* ---------- Galería ---------- */
+    let idx = 0;
+    const main = $("[data-main]");
+    const count = $("[data-count]");
+    const thumbs = $$("[data-thumb]");
+    const mod = (i) => (i + images.length) % images.length;
+
+    function show(i) {
+      if (!images.length) return;
+      idx = mod(i);
+      if (main) { main.src = images[idx].src; }
+      if (count) count.textContent = `${idx + 1} / ${images.length}`;
+      thumbs.forEach((t, n) => t.setAttribute("aria-current", n === idx ? "true" : "false"));
+    }
+    $("[data-prev]")?.addEventListener("click", () => show(idx - 1));
+    $("[data-next]")?.addEventListener("click", () => show(idx + 1));
+    thumbs.forEach((t, n) => t.addEventListener("click", () => show(n)));
+
+    // Deslizar sobre la imagen para cambiar (sin pisar el scroll vertical de la página)
+    function swipe(el, onLeft, onRight) {
+      let x0 = 0, y0 = 0, moved = false;
+      el.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; moved = false; }, { passive: true });
+      el.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { moved = true; (dx < 0 ? onLeft : onRight)(); }
+        if (moved) el.dataset.swiped = "1";
+      }, { passive: true });
+    }
+    if (images.length > 1) swipe($(".pdp__stage"), () => show(idx + 1), () => show(idx - 1));
+
+    /* ---------- Imagen ampliada (lightbox) ---------- */
+    const lb = $("[data-lightbox]");
+    if (lb) {
+      const lbImg = $("[data-lb-img]", lb);
+      const lbView = $("[data-lb-view]", lb);
+      const lbCount = $("[data-lb-count]", lb);
+      let pushed = false, opener = null;
+
+      const lbShow = (i) => {
+        idx = mod(i);
+        lb.classList.remove("is-zoomed");
+        lbImg.src = images[idx].full;
+        lbImg.style.cursor = "";
+        if (lbCount) { lbCount.hidden = images.length < 2; lbCount.textContent = `${idx + 1} / ${images.length}`; }
+        lbView.scrollTo(0, 0);
+      };
+      const lbOpen = () => {
+        opener = document.activeElement;
+        lb.hidden = false;
+        document.body.classList.add("lb-open");
+        lbShow(idx);
+        // Una entrada en el historial: el botón "atrás" del celular cierra la imagen y no la página
+        history.pushState({ lightbox: true }, "");
+        pushed = true;
+        $("[data-lb-close]", lb).focus();
+      };
+      const lbHide = () => {
+        lb.hidden = true;
+        document.body.classList.remove("lb-open");
+        show(idx);   // la galería de la página queda en la última imagen vista
+        opener?.focus?.();
+      };
+      const lbClose = () => { if (pushed) history.back(); else lbHide(); };
+
+      window.addEventListener("popstate", () => { if (pushed && !lb.hidden) { pushed = false; lbHide(); } else pushed = false; });
+
+      $("[data-zoom]")?.addEventListener("click", () => {
+        if ($(".pdp__stage").dataset.swiped) { delete $(".pdp__stage").dataset.swiped; return; }
+        lbOpen();
+      });
+      $("[data-lb-close]", lb).addEventListener("click", lbClose);
+      $("[data-lb-prev]", lb)?.addEventListener("click", (e) => { e.stopPropagation(); lbShow(idx - 1); });
+      $("[data-lb-next]", lb)?.addEventListener("click", (e) => { e.stopPropagation(); lbShow(idx + 1); });
+
+      // Tocar la imagen: acercar / alejar. Tocar el fondo: cerrar.
+      lbView.addEventListener("click", (e) => {
+        if (lbView.dataset.swiped) { delete lbView.dataset.swiped; return; }
+        if (e.target === lbImg) lb.classList.toggle("is-zoomed");
+        else if (e.target === lbView) lbClose();
+      });
+      if (images.length > 1) {
+        swipe(lbView, () => !lb.classList.contains("is-zoomed") && lbShow(idx + 1), () => !lb.classList.contains("is-zoomed") && lbShow(idx - 1));
+      }
+      document.addEventListener("keydown", (e) => {
+        if (lb.hidden) return;
+        if (e.key === "Escape") lbClose();
+        else if (e.key === "ArrowRight" && images.length > 1) lbShow(idx + 1);
+        else if (e.key === "ArrowLeft" && images.length > 1) lbShow(idx - 1);
+        else if (e.key === "Tab") {   // el foco no sale del diálogo
+          const f = $$("button", lb).filter((b) => b.offsetParent !== null);
+          if (!f.length) return;
+          const first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      });
+    }
+
+    /* ---------- Color elegido → mensaje de WhatsApp ---------- */
+    let color = "";
+    const wa = $("[data-wa]");
+    const message = () =>
+      `Hola! Me interesa «${data.name}»${color ? ` en color ${color}` : ""}${data.code ? ` (cód. ${data.code})` : ""}. ¿Está disponible?\n${pageUrl}`;
+    const updateWa = () => {
+      if (wa && data.waNumber) wa.href = `https://wa.me/${data.waNumber}?text=${encodeURIComponent(message())}`;
+    };
+    updateWa();
+    const swatches = $$("[data-color]");
+    if (swatches.length === 1) color = swatches[0].dataset.color;
+    swatches.forEach((b) =>
+      b.addEventListener("click", () => {
+        const already = b.getAttribute("aria-pressed") === "true";
+        swatches.forEach((x) => x.setAttribute("aria-pressed", "false"));
+        color = already && swatches.length > 1 ? "" : b.dataset.color;
+        if (color) b.setAttribute("aria-pressed", "true");
+        $("[data-color-name]").textContent = color || "elegí uno";
+        updateWa();
+      })
+    );
+
+    /* ---------- Compartir ---------- */
+    const share = $("[data-share]");
+    const btn = $("[data-share-btn]", share);
+    const menu = $("[data-share-menu]", share);
+    const toast = $("[data-toast]");
+    const text = `${data.name}`;
+    let toastTimer;
+    const say = (msg) => {
+      toast.textContent = msg;
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => (toast.hidden = true), 2600);
+    };
+
+    $("[data-share-wa]", share).href = `https://wa.me/?text=${encodeURIComponent(`${text}\n${pageUrl}`)}`;
+    $("[data-share-fb]", share).href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
+
+    const setMenu = (open) => {
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+    };
+    async function copyLink() {
+      try {
+        await navigator.clipboard.writeText(pageUrl);
+      } catch {
+        const t = document.createElement("textarea");
+        t.value = pageUrl; t.style.position = "fixed"; t.style.opacity = "0";
+        document.body.append(t); t.select();
+        try { document.execCommand("copy"); } catch {}
+        t.remove();
+      }
+      say("Link copiado");
+    }
+
+    // En celular (pantalla táctil) se abre el menú nativo del teléfono; en escritorio, el menú propio
+    const nativeShare = () => typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
+    btn.addEventListener("click", async () => {
+      if (nativeShare()) {
+        try { await navigator.share({ title: data.name, text, url: pageUrl }); }
+        catch (e) { if (e && e.name !== "AbortError") setMenu(true); }   // si falla, se muestra el menú propio
+        return;
+      }
+      setMenu(menu.hidden);
+    });
+    $("[data-share-copy]", share).addEventListener("click", async () => { await copyLink(); setMenu(false); btn.focus(); });
+    for (const a of $$("a", menu)) a.addEventListener("click", () => setMenu(false));
+    document.addEventListener("click", (e) => { if (!menu.hidden && !share.contains(e.target)) setMenu(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) { setMenu(false); btn.focus(); } });
+  }
+</script>

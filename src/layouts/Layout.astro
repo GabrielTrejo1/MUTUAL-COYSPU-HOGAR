@@ -1,22 +1,31 @@
 ---
 /* Layout base: <head>, fuentes, estilos globales, sprite de íconos,
-   Nav, Footer y el modal de producto (compartido por todas las páginas). */
-import "../styles/styles.css";
+   Nav y Footer (compartidos por todas las páginas).
+   Props opcionales para compartir en redes: `image` (URL absoluta) y `ogType`.
+   El slot "head" sirve para sumar etiquetas extra (ej. datos estructurados del producto). */
+   import "../styles/styles.css";
 import "../styles/catalog.css";
 
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
-import ProductModal from "../components/ProductModal.astro";
 
 interface Props {
   title?: string;
   description?: string;
+  /** imagen para la vista previa al compartir (URL absoluta) */
+  image?: string;
+  ogType?: "website" | "product";
 }
 
 const {
   title = "Mutual Coyspu Hogar — Catálogo",
   description = "Catálogo de artículos para el hogar de Mutual Coyspu. Envíos gratis y hasta 12 cuotas sin interés.",
+  image,
+  ogType = "website",
 } = Astro.props;
+
+// Dirección canónica: solo si se configuró `site` en astro.config (sin dominio, se omite)
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 ---
 
 <!doctype html>
@@ -26,7 +35,19 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="icon" href="/img/HOGAR-LOGO.png" type="image/png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {canonical && <link rel="canonical" href={canonical} />}
+
+    <!-- Vista previa al compartir (WhatsApp, Facebook, etc.) -->
+    <meta property="og:site_name" content="Mutual Coyspu Hogar" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+    <slot name="head" />
 
     <!-- Fuentes: Poppins (encabezados) y Roboto (cuerpo) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,7 +56,6 @@ const {
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   </head>
   <body>
     <!-- Sprite de íconos: <svg class="icon"><use href="#i-…" /></svg> -->
@@ -49,6 +69,11 @@ const {
       <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
       <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.7"/><circle cx="6" cy="12" r="2.7"/><circle cx="18" cy="18.5" r="2.7"/><path d="M8.4 10.7l7.2-3.9M8.4 13.3l7.2 3.9"/></symbol>
+      <symbol id="i-facebook" viewBox="0 0 24 24"><path d="M14 8.5V7c0-.9.4-1.5 1.6-1.5H17V2.7h-2.3C12 2.7 10.5 4.3 10.5 6.8v1.7H8v3h2.5v9h3.5v-9h2.4l.4-3z"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
       <symbol id="i-whatsapp" viewBox="0 0 24 24"><path d="M3.5 20.5l1.3-4.3A8.5 8.5 0 1 1 8.1 19.3z"/><path d="M9.3 8.3c.3 2.7 2.5 5 5.3 5.4l1.1-1.4-2-1.1-.9.8c-.9-.3-1.7-1.2-2-2.1l.8-.9-1.1-2z" fill="currentColor" stroke="none"/></symbol>
     </svg>
 
@@ -61,6 +86,5 @@ const {
     </main>
 
     <Footer />
-    <ProductModal />
   </body>
 </html>

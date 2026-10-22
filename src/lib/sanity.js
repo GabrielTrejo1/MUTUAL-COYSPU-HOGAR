@@ -76,10 +76,11 @@
      "features": caracteristicas,
      "attributes": atributos[]{ "key": clave, "value": valor },
      "warranty": garantia,
+     "stock": stock,
      "colors": colores[]->{ "name": nombre, "hex": valorHex },
      "image": imagenes[0].asset->url,
      "images": imagenes[].asset->url,
-     "category": categoria->{ "slug": slug.current, "title": nombre, "parentSlug": categoriaPadre->slug.current }
+     "category": categoria->{ "slug": slug.current, "title": nombre, "parentSlug": categoriaPadre->slug.current, "parentTitle": categoriaPadre->nombre }
    `;
    
    const CATEGORY_FIELDS = /* groq */ `
@@ -97,6 +98,14 @@
    /* `limit` es opcional: en el inicio se piden pocos productos y en las páginas
       de listado (/novedades, /mas-vendidos, /ofertas) se piden todos. */
    const slice = (limit) => (limit ? `[0...${Number(limit)}]` : "");
+   
+   /** Todos los productos que tienen slug (una página por producto en /productos/[slug]).
+       Se usa también para calcular los relacionados sin hacer una consulta por producto. */
+   export function getAllProducts() {
+     return sanity.fetch(
+       `*[_type == "product" && defined(slug.current)] | order(nombre asc){ ${PRODUCT_FIELDS} }`
+     );
+   }
    
    /** Productos con la etiqueta "Nuevo" (campo `nuevo`), los más recientes primero. */
    export function getNewProducts(limit) {

@@ -4,7 +4,7 @@
    categoría (ver lib/filters.js); el filtrado en sí ocurre en el navegador, sin
    recargar la página.
    Si hay un solo producto o nada para filtrar, se muestra la grilla sin panel. */
-import "../styles/filters.css";
+   import "../styles/filters.css";
 import ProductCard from "./ProductCard.astro";
 import { buildFacets, cardFilterData } from "../lib/filters";
 
@@ -275,7 +275,39 @@ const instCount = (n) => products.filter((p) => Number(p.installments) >= n).len
       for (const el of $$("[data-count]")) el.textContent = String(shown);
       for (const el of $$("[data-word]")) el.textContent = plural(shown, "producto", "productos");
       emptyBox.hidden = shown > 0;
+      writeUrl();
     }
+
+    /* ----- Filtros en la URL -----
+       Cada cambio actualiza la dirección (?marca=…&min=…), sin sumar entradas al historial.
+       Así, al entrar a un producto y volver con "atrás", la lista queda filtrada igual,
+       y el link con filtros se puede compartir. */
+    const groupOf = (i) => i.dataset.group;
+    const writeUrl = () => {
+      const st = readState();
+      const q = new URLSearchParams();
+      if (st.min !== null) q.set("min", String(st.min));
+      if (st.max !== null) q.set("max", String(st.max));
+      if (st.inst) q.set("cuotas", String(st.inst));
+      for (const [g, set] of Object.entries(st.sel)) for (const v of set) q.append(g, v);
+      const qs = q.toString();
+      const next = location.pathname + (qs ? `?${qs}` : "") + location.hash;
+      if (next !== location.pathname + location.search + location.hash) history.replaceState(history.state, "", next);
+    };
+    const readUrl = () => {
+      const q = new URLSearchParams(location.search);
+      if (![...q.keys()].length) return;
+      if (priceMin && q.has("min")) priceMin.value = q.get("min");
+      if (priceMax && q.has("max")) priceMax.value = q.get("max");
+      for (const i of inputs) {
+        const g = groupOf(i);
+        if (g === "inst") {
+          if (q.has("cuotas")) i.checked = i.value === q.get("cuotas");
+        } else if (q.getAll(g).includes(i.value)) {
+          i.checked = true;
+        }
+      }
+    };
 
     const clearAll = () => {
       for (const i of inputs) i.checked = i.dataset.group === "inst" && i.value === "0";
@@ -323,6 +355,7 @@ const instCount = (n) => products.filter((p) => Number(p.installments) >= n).len
     });
     mobile.addEventListener("change", () => { if (!mobile.matches) closePanel(); });
 
+    readUrl();
     apply();
   }
 </script>
