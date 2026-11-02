@@ -1,0 +1,58 @@
+---
+/* Aviso de "página en desarrollo". Barra fina arriba de todo, que el visitante puede cerrar.
+   Se controla con variables de entorno (en Cloudflare: Settings → Variables), sin tocar código:
+     PUBLIC_DEV_BANNER=true   → muestra el aviso y además le pide a Google que no indexe el sitio
+   Para el lanzamiento: borrá la variable (o ponela en false) y reconstruí el sitio. */
+   const show = import.meta.env.PUBLIC_DEV_BANNER === "true";
+---
+
+{show && (
+  <div class="devbar" data-devbar role="region" aria-label="Aviso">
+    <p>
+      <strong>Sitio en construcción.</strong>
+      Estás viendo una versión de prueba: algunos datos y productos pueden cambiar.
+    </p>
+    <button type="button" class="devbar__close" data-devbar-close aria-label="Cerrar aviso">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+    </button>
+  </div>
+
+  <style>
+    .devbar {
+      position: relative;
+      display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+      padding: 0.45rem 2.75rem 0.45rem 1rem;
+      background: var(--c-ink-strong);
+      color: var(--c-on-dark);
+      font-family: var(--font-heading);
+      font-size: 0.82rem;
+      line-height: 1.35;
+      text-align: center;
+    }
+    .devbar[hidden] { display: none; }
+    .devbar p { margin: 0; }
+    .devbar strong { color: var(--c-leaf); font-weight: 500; margin-right: 0.35rem; }
+    .devbar__close {
+      position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px;
+      display: grid; place-items: center;
+      border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
+    }
+    .devbar__close:hover { background: rgba(255, 255, 255, 0.14); }
+    .devbar__close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    @media (max-width: 560px) { .devbar { font-size: 0.76rem; } .devbar strong { display: block; margin: 0; } }
+  </style>
+
+  <script>
+    // @ts-nocheck
+    const bar = document.querySelector("[data-devbar]");
+    if (bar) {
+      const KEY = "devbar-closed";
+      try { if (sessionStorage.getItem(KEY)) bar.hidden = true; } catch {}
+      document.querySelector("[data-devbar-close]")?.addEventListener("click", () => {
+        bar.hidden = true;
+        try { sessionStorage.setItem(KEY, "1"); } catch {}
+      });
+    }
+  </script>
+)}
