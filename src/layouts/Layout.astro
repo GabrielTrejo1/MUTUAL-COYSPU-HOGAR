@@ -37,7 +37,7 @@ const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : un
     <title>{title}</title>
     <meta name="description" content={description} />
     {import.meta.env.PUBLIC_DEV_BANNER === "true" && <meta name="robots" content="noindex, nofollow" />}
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/img/HOGAR-LOGO.png" type="image/svg+xml" />
     {canonical && <link rel="canonical" href={canonical} />}
 
     <!-- Vista previa al compartir (WhatsApp, Facebook, etc.) -->
@@ -50,6 +50,8 @@ const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : un
     {image && <meta property="og:image" content={image} />}
     <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
     <slot name="head" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Fuentes: Poppins (encabezados) y Roboto (cuerpo) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
