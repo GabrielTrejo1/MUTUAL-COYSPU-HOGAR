@@ -3,20 +3,26 @@
    para funcionar también desde las páginas de categoría.
    "Productos" abre, al hacer clic, un panel con los departamentos y sus subcategorías
    (se leen de Sanity con getCategoryTree). Si no hay categorías, queda como un enlace común. */
-   import "../styles/nav-mega.css";
+import "../styles/nav-mega.css";
 import { categoryMeta, getCategoryTree } from "../lib/sanity";
+import { whatsappHref } from "../lib/hero";
+import { CONTACT } from "../lib/contacto";
 
 const { pathname } = Astro.url;
 
 const tree = await getCategoryTree();
 const inProducts = pathname.startsWith("/categorias");
 
+// "Consultar": abre WhatsApp directo con un mensaje armado (sin número configurado, lleva a /contacto)
+const consultHref = whatsappHref(import.meta.env.PUBLIC_WHATSAPP_NUMBER, CONTACT.whatsappMessage);
+const consultExternal = consultHref.startsWith("http");
+
 const links = [
   { href: "/", label: "Inicio" },
   { href: "/#productos", label: "Productos", menu: true },
   { href: "/ofertas", label: "Ofertas" },
   { href: "/#nosotros", label: "Nosotros" },
-  { href: "/#contacto", label: "Contacto" },
+  { href: "/contacto", label: "Contacto" },
 ];
 ---
 
@@ -84,7 +90,7 @@ const links = [
           )}
         </ul>
       </nav>
-      <a href="/#contacto" class="btn nav__cta">Consultar</a>
+      <a href={consultHref} class="btn nav__cta" target={consultExternal ? "_blank" : undefined} rel={consultExternal ? "noopener noreferrer" : undefined}>Consultar</a>
     </div>
   </div>
 </header>

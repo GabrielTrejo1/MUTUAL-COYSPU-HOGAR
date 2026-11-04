@@ -1,0 +1,85 @@
+---
+/* Formulario de contacto por mail, con Web3Forms (gratis, no necesita servidor).
+   Requiere la variable PUBLIC_WEB3FORMS_KEY (la "Access Key" que Web3Forms envía a tu mail al
+   registrarte en web3forms.com). Es pública por diseño: va en el HTML. Sin la variable, el
+   formulario no se muestra. Anti-spam: campo trampa oculto (botcheck) y comprobación de Web3Forms. */
+const key = import.meta.env.PUBLIC_WEB3FORMS_KEY;
+---
+
+{key && (
+  <form class="cform" data-cform novalidate>
+    <input type="hidden" name="access_key" value={key} />
+    <input type="hidden" name="subject" value="Nueva consulta desde la web — Mutual Coyspu Hogar" />
+    <input type="hidden" name="from_name" value="Web Mutual Coyspu Hogar" />
+    <!-- Campo trampa: las personas no lo ven; los robots lo completan -->
+    <input type="checkbox" name="botcheck" class="cform__trap" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+    <div class="cform__row">
+      <label class="cform__field">
+        <span>Nombre</span>
+        <input type="text" name="name" autocomplete="name" required maxlength="80" />
+      </label>
+      <label class="cform__field">
+        <span>Teléfono o mail</span>
+        <input type="text" name="contact" autocomplete="email" required maxlength="120" />
+      </label>
+    </div>
+    <label class="cform__field">
+      <span>Mensaje</span>
+      <textarea name="message" rows="5" required maxlength="2000"></textarea>
+    </label>
+
+    <div class="cform__foot">
+      <button type="submit" class="btn btn--dark" data-submit>Enviar consulta</button>
+      <p class="cform__status" data-status role="status" aria-live="polite"></p>
+    </div>
+    <p class="cform__privacy">Usamos tus datos solo para responder tu consulta.</p>
+  </form>
+
+  <script>
+    // @ts-nocheck
+    const form = document.querySelector("[data-cform]");
+    if (form) {
+      const status = form.querySelector("[data-status]");
+      const btn = form.querySelector("[data-submit]");
+      const say = (msg, kind) => { status.textContent = msg; status.dataset.kind = kind || ""; };
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const f = new FormData(form);
+        if (f.get("botcheck")) return;   // robot: se ignora en silencio
+
+        // Validación simple, en español
+        for (const el of form.querySelectorAll("[required]")) {
+          const bad = !el.value.trim();
+          el.toggleAttribute("aria-invalid", bad);
+          if (bad) { say("Completá todos los campos.", "error"); el.focus(); return; }
+        }
+        const contact = String(f.get("contact")).trim();
+        const looksValid = /^\S+@\S+\.\S+$/.test(contact) || contact.replace(/\D/g, "").length >= 6;
+        if (!looksValid) { say("Revisá el teléfono o el mail: no parece válido.", "error"); form.contact.focus(); return; }
+
+        btn.disabled = true;
+        say("Enviando…", "");
+        try {
+          const res = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(Object.fromEntries(f)),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success) {
+            form.reset();
+            say("¡Listo! Recibimos tu consulta y te vamos a responder a la brevedad.", "ok");
+          } else {
+            say("No pudimos enviar el mensaje. Probá de nuevo o escribinos por WhatsApp.", "error");
+          }
+        } catch {
+          say("No hay conexión. Probá de nuevo o escribinos por WhatsApp.", "error");
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+  </script>
+)}
